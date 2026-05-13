@@ -10,19 +10,17 @@ import ConfirmDoneModal from "../components/confirmdonemodal";
 import api from "../services/api";
 
 function Home() {
-  // 1. ESTADO DAS TAREFAS 
-  const [tasks, setTasks] = useState([
-  ]);
+  // 1. ESTADO DAS TAREFAS
+  const [tasks, setTasks] = useState([]);
 
-  async function getTasks(){
-    try{
+  async function getTasks() {
+    try {
       const response = await api.get("/tasks");
-      setTasks(response.data)
-    }catch(error){
-      console.error("Erro ao buscar tarefas:", error)
+      setTasks(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar tarefas:", error);
     }
   }
-
 
   useEffect(() => {
     getTasks();
@@ -38,23 +36,23 @@ function Home() {
   // 3. FUNÇÕES DE MANIPULAÇÃO
 
   // Adicionar Nova Tarefa
-  async function handleAddTask(newTask){
-    try{
+  async function handleAddTask(newTask) {
+    try {
       await api.post("/tasks", newTask);
       getTasks();
-    }catch(error){
+    } catch (error) {
       console.error("Erro ao adicionar tarefa:", error);
       alert("Não foi possível salvar a tarefa no banco de dados.");
     }
   }
 
   //Atualizar Tarefa
-  async function handleUpdateTask(updatedTask){
-    try{
-      await api.put(`/tasks/${updatedTask.id}`, updatedTask)
+  async function handleUpdateTask(updatedTask) {
+    try {
+      await api.put(`/tasks/${updatedTask.id}`, updatedTask);
       setTarefaParaEditar(null);
       getTasks();
-    }catch(error){
+    } catch (error) {
       console.error("Erro ao atualizar tarefa:", error);
       alert("Não foi possível atualizar a tarefa no banco de dados.");
     }
@@ -62,19 +60,18 @@ function Home() {
 
   //Deletar Tarefa
   const confirmDelete = async () => {
-  if (tarefaParaDeletar) {
-    try {
-      await api.delete(`/tasks/${tarefaParaDeletar.id}`);
+    if (tarefaParaDeletar) {
+      try {
+        await api.delete(`/tasks/${tarefaParaDeletar.id}`);
 
-      getTasks();
-      setTarefaParaDeletar(null);
-      
-    } catch (error) {
-      console.error("Erro ao deletar tarefa:", error);
-      alert("Erro ao excluir a tarefa do servidor.");
+        getTasks();
+        setTarefaParaDeletar(null);
+      } catch (error) {
+        console.error("Erro ao deletar tarefa:", error);
+        alert("Erro ao excluir a tarefa do servidor.");
+      }
     }
-  }
-};
+  };
 
   // 2. Função para disparar a confirmação ou bloquear
   const handleToggleStatus = (id) => {
@@ -88,13 +85,19 @@ function Home() {
   };
 
   // 3. Função que efetiva a conclusão
-  const confirmDone = () => {
+  const confirmDone = async () => {
     if (tarefaParaConcluir) {
-      const novasTarefas = tasks.map((t) =>
-        t.id === tarefaParaConcluir.id ? { ...t, concluida: true } : t,
-      );
-      setTasks(novasTarefas);
-      setTarefaParaConcluir(null);
+      try {
+        // 1. Criamos o objeto atualizado
+        const tarefaAtualizada = { ...tarefaParaConcluir, concluida: true };
+
+        await handleUpdateTask(tarefaAtualizada);
+
+        setTarefaParaConcluir(null);
+      } catch (error) {
+        console.error("Erro ao concluir tarefa:", error);
+        alert("Não foi possível marcar a tarefa como concluída no servidor.");
+      }
     }
   };
 
