@@ -1,7 +1,11 @@
 package com.meuprojeto.todolist.controller;
 
 import com.meuprojeto.todolist.entitys.task.Task;
+import com.meuprojeto.todolist.entitys.task.TaskRequestDTO;
+import com.meuprojeto.todolist.entitys.task.TaskResponseDTO;
 import com.meuprojeto.todolist.service.TaskService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,20 +22,31 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<Task> saveTask(@RequestBody Task task){
-        return ResponseEntity.ok(taskService.saveTask(task));
+    public ResponseEntity<TaskResponseDTO> saveTask(@RequestBody @Valid TaskRequestDTO taskDTO){
+        Task task = taskService.saveTask(taskDTO);
+        TaskResponseDTO response = new TaskResponseDTO(task);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<Task>> taskList(){
+    public ResponseEntity<List<TaskResponseDTO>> taskList(){
         List<Task> tasks = taskService.taskList();
+        List<TaskResponseDTO> response = tasks.stream().map(TaskResponseDTO::new).toList();
+        return ResponseEntity.ok(response);
+    }
 
-        return ResponseEntity.ok(tasks);
+    @GetMapping("/today")
+    public ResponseEntity<List<TaskResponseDTO>> taskListToday(){
+        List<Task> tasks = taskService.taskListToday();
+        List<TaskResponseDTO> response = tasks.stream().map(TaskResponseDTO::new).toList();
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Task> updateTask(@RequestBody Task task,@PathVariable UUID id){
-        return ResponseEntity.ok(taskService.updateTask(task,id));
+    public ResponseEntity<TaskResponseDTO> updateTask(@RequestBody @Valid TaskRequestDTO taskDTO,@PathVariable UUID id){
+        Task task = taskService.updateTask(taskDTO,id);
+        TaskResponseDTO response = new TaskResponseDTO(task);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")

@@ -11,7 +11,7 @@ import ConfirmDoneModal from "../components/confirmdonemodal";
 // Hook de lógica compartilhada
 import { useTasks } from "../hooks/useTasks";
 
-function Home() {
+function TasksDayPage() {
   const { 
     tasks, 
     fetchTasks, 
@@ -20,6 +20,7 @@ function Home() {
     handleDeleteTask 
   } = useTasks();
 
+  // 1. ESTADOS DE INTERFACE
   const [tarefaSelecionada, setTarefaSelecionada] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [tarefaParaEditar, setTarefaParaEditar] = useState(null);
@@ -27,28 +28,26 @@ function Home() {
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const endpointToday = "/tasks/today";
+
   useEffect(() => {
-    fetchTasks();
+    fetchTasks(endpointToday);
   }, []);
 
-  // --- LÓGICA DE ESTATÍSTICAS ---
-  const hoje = new Date().toISOString().split("T")[0]; // Data atual YYYY-MM-DD
-  
+  // --- LÓGICA DE ESTATÍSTICAS (Compacta) ---
+  const hoje = new Date().toISOString().split("T")[0];
   const total = tasks.length;
   const concluidas = tasks.filter(t => t.concluida).length;
   const pendentes = total - concluidas;
-  
-  // Filtra tarefas não concluídas onde a data limite é menor que hoje
   const atrasadas = tasks.filter(t => !t.concluida && t.dataLimite < hoje).length;
-  
   const porcentagem = total > 0 ? Math.round((concluidas / total) * 100) : 0;
 
-  // --- FUNÇÕES CRUD ---
+  // 2. FUNÇÕES DE MANIPULAÇÃO
   const onAdd = async (newTask) => {
     const res = await handleAddTask(newTask);
     if (res.success) {
       setIsAddModalOpen(false);
-      fetchTasks(); 
+      fetchTasks(endpointToday);
     } else {
       tratarErrosBackend(res.error);
     }
@@ -58,7 +57,7 @@ function Home() {
     const res = await handleUpdateTask(updatedTask);
     if (res.success) {
       setTarefaParaEditar(null);
-      fetchTasks();
+      fetchTasks(endpointToday);
     } else {
       tratarErrosBackend(res.error);
     }
@@ -68,7 +67,7 @@ function Home() {
     const res = await handleDeleteTask(tarefaParaDeletar.id);
     if (res.success) {
       setTarefaParaDeletar(null);
-      fetchTasks();
+      fetchTasks(endpointToday);
     } else {
       alert("Não foi possível excluir a tarefa.");
     }
@@ -79,7 +78,7 @@ function Home() {
     const res = await handleUpdateTask(tarefaConcluida);
     if (res.success) {
       setTarefaParaConcluir(null);
-      fetchTasks();
+      fetchTasks(endpointToday);
     } else {
       tratarErrosBackend(res.error);
     }
@@ -94,6 +93,11 @@ function Home() {
     }
   };
 
+  const handleToggleStatus = (id) => {
+    const task = tasks.find((t) => t.id === id);
+    if (task && !task.concluida) setTarefaParaConcluir(task);
+  };
+
   return (
     <div className="flex h-screen bg-slate-900 overflow-hidden">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
@@ -103,36 +107,39 @@ function Home() {
 
         <main className="p-4 md:p-6 space-y-5 w-full max-w-7xl mx-auto">
           
+          {/* VISÃO GERAL COMPACTA */}
           <section className="space-y-4">
-            <h1 className="text-xl font-bold text-white">Visão Geral</h1>
+            <header>
+               <h1 className="text-xl font-bold text-white mb-1">📅 Minha Jornada Hoje</h1>
+               <p className="text-slate-400 text-xs">Foco total nas entregas programadas para este dia.</p>
+            </header>
             
-            {/* GRID AJUSTADO PARA 4 COLUNAS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 flex flex-col justify-center">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider">Total de Tarefas</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider">Tarefas do Dia</p>
                 <p className="text-2xl font-bold text-white">{total}</p>
               </div>
 
               <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 border-l-4 border-l-blue-500 flex flex-col justify-center">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider">Pendentes</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider">Restantes</p>
                 <p className="text-2xl font-bold text-blue-400">{pendentes}</p>
               </div>
 
               <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 border-l-4 border-l-emerald-500 flex flex-col justify-center">
-                <p className="text-slate-400 text-[10px] uppercase tracking-wider">Concluídas</p>
+                <p className="text-slate-400 text-[10px] uppercase tracking-wider">Finalizadas</p>
                 <p className="text-2xl font-bold text-emerald-400">{concluidas}</p>
               </div>
 
-              {/* NOVA CAIXA: ATRASADAS */}
               <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 border-l-4 border-l-red-500 flex flex-col justify-center">
                 <p className="text-slate-400 text-[10px] uppercase tracking-wider">Atrasadas</p>
                 <p className="text-2xl font-bold text-red-500">{atrasadas}</p>
               </div>
             </div>
 
+            {/* BARRA DE PROGRESSO DO DIA */}
             <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-2xl space-y-2">
               <div className="flex justify-between items-center px-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progresso Geral</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Conclusão de Hoje</span>
                 <span className="text-xs font-bold text-emerald-400">{porcentagem}%</span>
               </div>
               <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden shadow-inner">
@@ -144,13 +151,14 @@ function Home() {
             </div>
           </section>
 
+          {/* LISTAGEM */}
           <section className="pb-6">
-            <h2 className="text-lg font-bold text-white mb-3">Minhas Tarefas</h2>
+            <h2 className="text-lg font-bold text-white mb-3">Lista de Afazeres</h2>
             <div className="bg-slate-800/30 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
               <Tabela
                 tasks={tasks}
-                onToggle={(id) => setTarefaParaConcluir(tasks.find(t => t.id === id))}
-                onDelete={(id) => setTarefaParaDeletar(tasks.find(t => t.id === id))}
+                onToggle={handleToggleStatus}
+                onDelete={(id) => setTarefaParaDeletar(tasks.find((t) => t.id === id))}
                 onEdit={(task) => !task.concluida && setTarefaParaEditar(task)}
                 onShowDetail={(task) => setTarefaSelecionada(task)}
               />
@@ -159,7 +167,7 @@ function Home() {
         </main>
       </div>
 
-      {/* MODAIS */}
+      {/* MODAIS REUTILIZADOS */}
       <TaskDetailModal task={tarefaSelecionada} onClose={() => setTarefaSelecionada(null)} />
       <AddTaskModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAdd={onAdd} />
       <UpdateTaskModal isOpen={!!tarefaParaEditar} task={tarefaParaEditar} onClose={() => setTarefaParaEditar(null)} onUpdate={onUpdate} />
@@ -169,4 +177,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default TasksDayPage;

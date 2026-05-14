@@ -1,6 +1,8 @@
 package com.meuprojeto.todolist.service;
 
 import com.meuprojeto.todolist.entitys.task.Task;
+import com.meuprojeto.todolist.entitys.task.TaskRequestDTO;
+import com.meuprojeto.todolist.exceptions.RecursoNaoEncontradoException;
 import com.meuprojeto.todolist.repository.TaskRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -18,13 +20,27 @@ public class TaskService {
     }
 
     @Transactional
-    public Task saveTask(Task task){
-        task.setConcluida(false);
+    public Task saveTask(TaskRequestDTO taskDTO){
+        Task task = Task.builder()
+                .titulo(taskDTO.titulo())
+                .descricao(taskDTO.descricao())
+                .prioridade(taskDTO.prioridade())
+                .dataLimite(taskDTO.dataLimite())
+                .build();
         return taskRepository.save(task);
     }
 
     public List<Task> taskList(){
-        List<Task> tasks =  taskRepository.findAll();
+        List<Task> tasks =  taskRepository.findAllCustomSorted();
+        tasks.forEach(task -> {
+            task.ajustarPrioridadePorAtraso();
+            taskRepository.save(task);
+        });
+        return tasks;
+    }
+
+    public List<Task> taskListToday(){
+        List<Task> tasks =  taskRepository.findAllToday();
         tasks.forEach(task -> {
             task.ajustarPrioridadePorAtraso();
             taskRepository.save(task);
@@ -33,16 +49,16 @@ public class TaskService {
     }
 
     @Transactional
-    public Task updateTask(Task task, UUID id) {
+    public Task updateTask(TaskRequestDTO taskDTO, UUID id) {
         Task taskExistente = taskRepository.findById(id).orElseThrow(
-                () -> new RuntimeException("Tarefa Não Existe")
+                () -> new RecursoNaoEncontradoException("Tarefa Não encontrada no banco de dados")
         );
 
-        taskExistente.setTitulo(task.getTitulo());
-        taskExistente.setDescricao(task.getDescricao());
-        taskExistente.setPrioridade(task.getPrioridade());
-        taskExistente.setDataLimite(task.getDataLimite());
-        taskExistente.setConcluida(task.getConcluida());
+        taskExistente.setTitulo(taskDTO.titulo());
+        taskExistente.setDescricao(taskDTO.descricao());
+        taskExistente.setPrioridade(taskDTO.prioridade());
+        taskExistente.setDataLimite(taskDTO.dataLimite());
+        taskExistente.setConcluida(taskDTO.concluida());
 
         return taskRepository.save(taskExistente);
     }
@@ -50,7 +66,7 @@ public class TaskService {
     @Transactional
     public void deleteTask(UUID id){
         if (!taskRepository.existsById(id)) {
-            throw new RuntimeException("Tarefa Não Existe");
+            throw new RecursoNaoEncontradoException("Tarefa Não Existe");
         }
         taskRepository.deleteById(id);
     }

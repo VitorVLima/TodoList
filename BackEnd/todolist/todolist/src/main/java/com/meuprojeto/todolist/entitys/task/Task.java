@@ -13,6 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Builder
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -44,6 +45,6 @@ public class Task {
     public String getStatusCustomizado() {
         if (this.concluida) return "CONCLUIDA";
         if (this.dataLimite != null && this.dataLimite.isBefore(LocalDate.now())) return "ATRASADA";
-        return "EM_DIA";
+        return "ATIVA";
     }
 }

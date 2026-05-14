@@ -3,6 +3,13 @@ import { X, Calendar, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 const TaskDetailModal = ({ task, onClose }) => {
   if (!task) return null;
 
+  const formatarDataInput = (dataString) => {
+    if (!dataString) return null;
+    // O backend geralmente envia YYYY-MM-DD
+    const [ano, mes, dia] = dataString.split("-");
+    return `${dia}/${mes}/${ano}`;
+  };
+
   return (
     // Backdrop: transição de opacidade suave
     <div 
@@ -44,21 +51,25 @@ const TaskDetailModal = ({ task, onClose }) => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* DATA DE CRIAÇÃO */}
             <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-800 group hover:border-slate-600 transition-colors">
               <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2 mb-1">
                 <Calendar size={12} /> Criado em
               </label>
               <p className="text-sm text-slate-200 font-medium">
-                {new Date(task.dataCriacao).toLocaleDateString('pt-BR')}
+                {/* Ajustado para formatar corretamente sem fuso */}
+                {formatarDataInput(task.dataCriacao) || "--/--/--"}
               </p>
             </div>
             
+            {/* DATA LIMITE */}
             <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-800 group hover:border-slate-600 transition-colors">
               <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2 mb-1">
                 <Clock size={12} /> Prazo Final
               </label>
               <p className="text-sm text-slate-200 font-medium">
-                {task.dataLimite ? new Date(task.dataLimite).toLocaleDateString('pt-BR') : "Sem prazo"}
+                {/* Ajustado para formatar corretamente sem fuso */}
+                {formatarDataInput(task.dataLimite) || "Sem prazo"}
               </p>
             </div>
           </div>
