@@ -25,6 +25,7 @@ public class Task {
 
     private String prioridade;
 
+    @Builder.Default
     private Boolean concluida = false;
 
     private LocalDate dataLimite;
@@ -43,7 +44,7 @@ public class Task {
 
     @Transient
     public String getStatusCustomizado() {
-        if (this.concluida) return "CONCLUIDA";
+        if (Boolean.TRUE.equals(this.concluida)) return "CONCLUIDA";
         if (this.dataLimite != null && this.dataLimite.isBefore(LocalDate.now())) return "ATRASADA";
         return "ATIVA";
     }

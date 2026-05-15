@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "../styles/custom-calendar.css";
-import Sidebar from "../components/sidebar";
-import Navbar from "../components/navbar";
 import Tabela from "../components/tabela";
 import TaskDetailModal from "../components/taskdetailmodal";
 import AddTaskModal from "../components/addtaskmodal";
@@ -13,33 +12,39 @@ import ConfirmDoneModal from "../components/confirmdonemodal";
 import { useTasks } from "../hooks/useTasks";
 
 function CalendarioPage() {
-  const { 
-    tasks, 
-    fetchTasks, 
-    handleAddTask, 
-    handleUpdateTask, 
-    handleDeleteTask 
+  const {
+    tasks,
+    fetchTasks,
+    handleAddTask,
+    handleUpdateTask,
+    handleDeleteTask,
   } = useTasks();
 
-  // 1. ESTADOS DE INTERFACE (Modais e UI)
+  const { isAddModalOpen, setIsAddModalOpen } = useOutletContext();
+
+  // 1. ESTADOS DE INTERFACE
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
   const [tarefaSelecionada, setTarefaSelecionada] = useState(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [tarefaParaEditar, setTarefaParaEditar] = useState(null);
   const [tarefaParaDeletar, setTarefaParaDeletar] = useState(null);
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Busca inicial das tarefas
+  // 2. GATILHO DE DADOS (Mantido para garantir que os dados apareçam)
   useEffect(() => {
+    // Chamamos o fetchTasks de forma silenciosa.
+    // Como não há um "setLoading(true)", a página não pisca.
     fetchTasks();
   }, []);
 
-  // 2. FUNÇÕES DE AUXÍLIO
-  const formatarData = (date) => date.toISOString().split("T")[0];
+  // 3. FUNÇÕES DE AUXÍLIO
+  const formatarData = (date) => {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split("T")[0];
+  };
 
   const tarefasDoDia = tasks.filter(
-    (task) => task.dataLimite === formatarData(dataSelecionada)
+    (task) => task.dataLimite === formatarData(dataSelecionada),
   );
 
   const tratarErrosBackend = (backendError) => {
@@ -51,7 +56,7 @@ function CalendarioPage() {
     }
   };
 
-  // 3. FUNÇÕES DE MANIPULAÇÃO (CRUD)
+  // 4. FUNÇÕES CRUD
   const onAdd = async (newTask) => {
     const res = await handleAddTask(newTask);
     if (res.success) {
@@ -94,75 +99,117 @@ function CalendarioPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-850">
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+    <>
+      <div className="animate-in fade-in duration-500 flex flex-col gap-4 w-full">
+        <header>
+          <h1 className="text-xl font-bold text-white uppercase tracking-tight">
+            📅 Planejamento Visual
+          </h1>
+        </header>
 
-      <div className={`flex-1 ${isSidebarOpen ? "ml-64" : "ml-20"} transition-all duration-300 min-h-screen bg-slate-900 text-slate-200 font-sans`}>
-        <Navbar onOpenAddModal={() => setIsAddModalOpen(true)} />
-
-        <main className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1 space-y-4">
-            <h1 className="text-2xl font-bold text-white">Meu Calendário</h1>
-            <div className="bg-slate-800 p-4 rounded-3xl border border-slate-700 shadow-xl">
+        <main className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6 w-full items-start">
+          {/* COLUNA DO CALENDÁRIO */}
+          <div className="space-y-4">
+            <div className="bg-slate-800/50 p-4 rounded-3xl border border-slate-700 shadow-xl backdrop-blur-sm">
               <Calendar
                 onChange={setDataSelecionada}
                 value={dataSelecionada}
-                className="dark-theme-calendar"
+                className="dark-theme-calendar w-full"
                 tileContent={({ date, view }) => {
-                  if (view === 'month' && tasks.some(t => t.dataLimite === formatarData(date))) {
-                    return <div className="h-1 w-1 bg-indigo-500 rounded-full mx-auto mt-1"></div>;
+                  if (
+                    view === "month" &&
+                    tasks.some((t) => t.dataLimite === formatarData(date))
+                  ) {
+                    return (
+                      <div className="h-1.5 w-1.5 bg-indigo-500 rounded-full mx-auto mt-1 shadow-[0_0_5px_rgba(99,102,241,0.8)]"></div>
+                    );
                   }
                 }}
               />
             </div>
-            <div className="bg-indigo-600/10 border border-indigo-500/20 p-4 rounded-2xl">
-              <p className="text-sm text-indigo-400 font-medium">
-                Dia: {dataSelecionada.toLocaleDateString('pt-BR')}
-              </p>
+
+            <div className="bg-indigo-600/10 border border-indigo-500/20 p-4 rounded-2xl flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase font-bold text-indigo-400 tracking-widest">
+                  Data Selecionada
+                </p>
+                <p className="text-sm font-bold text-white">
+                  {dataSelecionada.toLocaleDateString("pt-BR")}
+                </p>
+              </div>
+              <div className="bg-indigo-500/20 px-3 py-1 rounded-lg border border-indigo-500/30">
+                <span className="text-indigo-400 font-bold text-lg">
+                  {tarefasDoDia.length}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="lg:col-span-2">
-            <h2 className="text-xl font-bold text-white mb-4">Tarefas do Dia</h2>
-            {tarefasDoDia.length > 0 ? (
-              <Tabela 
-                tasks={tarefasDoDia}
-                onToggle={(id) => setTarefaParaConcluir(tasks.find(t => t.id === id))}
-                onDelete={(id) => setTarefaParaDeletar(tasks.find(t => t.id === id))}
-                onEdit={(task) => !task.concluida && setTarefaParaEditar(task)}
-                onShowDetail={(task) => setTarefaSelecionada(task)}
-              />
-            ) : (
-              <div className="h-64 border-2 border-dashed border-slate-800 rounded-3xl flex items-center justify-center text-slate-500">
-                Nenhuma tarefa para este dia.
-              </div>
-            )}
+          {/* COLUNA DA TABELA */}
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex justify-between items-center px-1">
+              <h2 className="text-lg font-bold text-white">Tarefas do Dia</h2>
+              <span className="bg-slate-800 text-slate-500 text-[10px] px-2 py-1 rounded-md font-mono uppercase">
+                {tarefasDoDia.length} Itens
+              </span>
+            </div>
+
+            <div className="bg-slate-800/30 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl w-full h-fit">
+              {tarefasDoDia.length > 0 ? (
+                <Tabela
+                  tasks={tarefasDoDia}
+                  onToggle={(id) =>
+                    setTarefaParaConcluir(tasks.find((t) => t.id === id))
+                  }
+                  onDelete={(id) =>
+                    setTarefaParaDeletar(tasks.find((t) => t.id === id))
+                  }
+                  onEdit={(task) =>
+                    !task.concluida && setTarefaParaEditar(task)
+                  }
+                  onShowDetail={(task) => setTarefaSelecionada(task)}
+                />
+              ) : (
+                <div className="h-40 flex flex-col items-center justify-center text-slate-500 space-y-2 bg-slate-800/10">
+                  <p className="text-sm italic font-medium">
+                    Nenhuma tarefa agendada para este dia.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </main>
       </div>
 
       {/* MODAIS */}
-      <TaskDetailModal task={tarefaSelecionada} onClose={() => setTarefaSelecionada(null)} />
-      <AddTaskModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAdd={onAdd} />
-      <UpdateTaskModal 
-        isOpen={!!tarefaParaEditar} 
-        task={tarefaParaEditar} 
-        onClose={() => setTarefaParaEditar(null)} 
-        onUpdate={onUpdate} 
+      <TaskDetailModal
+        task={tarefaSelecionada}
+        onClose={() => setTarefaSelecionada(null)}
       />
-      <ConfirmDeleteModal 
-        isOpen={!!tarefaParaDeletar} 
-        taskTitle={tarefaParaDeletar?.titulo} 
-        onClose={() => setTarefaParaDeletar(null)} 
-        onConfirm={onDelete} 
+      <AddTaskModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={onAdd}
       />
-      <ConfirmDoneModal 
-        isOpen={!!tarefaParaConcluir} 
-        taskTitle={tarefaParaConcluir?.titulo} 
-        onClose={() => setTarefaParaConcluir(null)} 
-        onConfirm={onConfirmDone} 
+      <UpdateTaskModal
+        isOpen={!!tarefaParaEditar}
+        task={tarefaParaEditar}
+        onClose={() => setTarefaParaEditar(null)}
+        onUpdate={onUpdate}
       />
-    </div>
+      <ConfirmDeleteModal
+        isOpen={!!tarefaParaDeletar}
+        taskTitle={tarefaParaDeletar?.titulo}
+        onClose={() => setTarefaParaDeletar(null)}
+        onConfirm={onDelete}
+      />
+      <ConfirmDoneModal
+        isOpen={!!tarefaParaConcluir}
+        taskTitle={tarefaParaConcluir?.titulo}
+        onClose={() => setTarefaParaConcluir(null)}
+        onConfirm={onConfirmDone}
+      />
+    </>
   );
 }
 

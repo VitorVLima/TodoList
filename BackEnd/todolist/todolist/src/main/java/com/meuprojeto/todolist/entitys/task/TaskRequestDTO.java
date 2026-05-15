@@ -20,7 +20,6 @@ public record TaskRequestDTO(
         String prioridade,
 
         @NotNull(message = "A tarefa deve ter uma data limite")
-        @FutureOrPresent(message = "A data limite não pode ser no passado")
         LocalDate dataLimite,
 
         Boolean concluida

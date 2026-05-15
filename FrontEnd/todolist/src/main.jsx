@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom' 
 import './index.css'
+import Layout from './components/layout.jsx' // Importe o Layout
 import Home from './pages/Home.jsx'
 import CalendarioPage from './pages/CalendarioPage.jsx' 
 import ConfigPage from './pages/ConfigPage.jsx'
@@ -11,17 +12,13 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Router>
       <Routes>
-        {/* Rota da Página Inicial */}
-        <Route path="/" element={<Home />} />
-
-        {/* Rota da Página de Tarefas do Dia */}
-        <Route path="/tarefas-do-dia" element={<TasksDayPage />} />
-        
-        {/* Rota da Página de Calendário */}
-        <Route path="/calendario" element={<CalendarioPage />} />
-
-        {/* Rota da Página de Configurações */}
-        <Route path="/config" element={<ConfigPage />} />
+        {/* O Layout envolve todas as rotas que devem ter Sidebar/Navbar */}
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="tarefas-do-dia" element={<TasksDayPage />} />
+          <Route path="calendario" element={<CalendarioPage />} />
+          <Route path="config" element={<ConfigPage />} />
+        </Route>
       </Routes>
     </Router>
   </StrictMode>,
