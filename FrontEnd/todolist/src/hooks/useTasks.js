@@ -45,10 +45,25 @@ export function useTasks() {
     }
   };
 
+  const searchTasks = async (name) => {
+    setLoading(true);
+    try {
+      const response = await api.get("/tasks/search", {
+        params: { name: name }
+      });
+      setTasks(response.data); 
+    } catch (error) {
+      console.error("Erro ao pesquisar tarefas:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     tasks,
     loading,
     fetchTasks,
+    searchTasks,
     handleAddTask,
     handleUpdateTask,
     handleDeleteTask,

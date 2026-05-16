@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react"; // Removido useEffect pois o Layout já gerencia o ciclo de dados
 import { useOutletContext } from "react-router-dom";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -9,32 +9,32 @@ import AddTaskModal from "../components/addtaskmodal";
 import UpdateTaskModal from "../components/updatetaskmodal";
 import ConfirmDeleteModal from "../components/confirmdeletemodel";
 import ConfirmDoneModal from "../components/confirmdonemodal";
+import SuccessModal from "../components/SuccessModal"; // Importado o Modal de Sucesso
 import { useTasks } from "../hooks/useTasks";
 
 function CalendarioPage() {
-  const {
-    tasks,
-    fetchTasks,
-    handleAddTask,
-    handleUpdateTask,
-    handleDeleteTask,
-  } = useTasks();
+  // 1. CONSUMO DO CONTEXTO COMPARTILHADO DO LAYOUT
+  const { tasks: tasksGlobais, fetchTasks, isAddModalOpen, setIsAddModalOpen } = useOutletContext();
 
-  const { isAddModalOpen, setIsAddModalOpen } = useOutletContext();
+  // O hook local gerencia estritamente as operações de mutação (POST, PUT, DELETE)
+  const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
 
-  // 1. ESTADOS DE INTERFACE
+  // 2. ESTADOS DE INTERFACE
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
   const [tarefaSelecionada, setTarefaSelecionada] = useState(null);
   const [tarefaParaEditar, setTarefaParaEditar] = useState(null);
   const [tarefaParaDeletar, setTarefaParaDeletar] = useState(null);
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState(null);
 
-  // 2. GATILHO DE DADOS (Mantido para garantir que os dados apareçam)
-  useEffect(() => {
-    // Chamamos o fetchTasks de forma silenciosa.
-    // Como não há um "setLoading(true)", a página não pisca.
-    fetchTasks();
-  }, []);
+  // ESTADOS DO MODAL DE SUCESSO
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // FUNÇÃO AUXILIAR PARA DISPARAR O SUCESSO
+  const dispararSucesso = (mensagem) => {
+    setSuccessMessage(mensagem);
+    setIsSuccessOpen(true);
+  };
 
   // 3. FUNÇÕES DE AUXÍLIO
   const formatarData = (date) => {
@@ -43,8 +43,9 @@ function CalendarioPage() {
     return d.toISOString().split("T")[0];
   };
 
-  const tarefasDoDia = tasks.filter(
-    (task) => task.dataLimite === formatarData(dataSelecionada),
+  // Filtramos as tarefas baseado na data selecionada no calendário
+  const tarefasDoDia = tasksGlobais.filter(
+    (task) => task.dataLimite === formatarData(dataSelecionada)
   );
 
   const tratarErrosBackend = (backendError) => {
@@ -56,12 +57,13 @@ function CalendarioPage() {
     }
   };
 
-  // 4. FUNÇÕES CRUD
+  // 4. FUNÇÕES CRUD COM INTERCEPTAÇÃO DE SUCESSO
   const onAdd = async (newTask) => {
     const res = await handleAddTask(newTask);
     if (res.success) {
       setIsAddModalOpen(false);
-      fetchTasks();
+      fetchTasks(); // Atualiza o estado centralizado no Layout
+      dispararSucesso("Sua tarefa foi agendada e salva com sucesso no calendário!");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -71,7 +73,8 @@ function CalendarioPage() {
     const res = await handleUpdateTask(updatedTask);
     if (res.success) {
       setTarefaParaEditar(null);
-      fetchTasks();
+      fetchTasks(); // Atualiza o estado centralizado no Layout
+      dispararSucesso("Os dados da tarefa foram atualizados com sucesso.");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -81,7 +84,8 @@ function CalendarioPage() {
     const res = await handleDeleteTask(tarefaParaDeletar.id);
     if (res.success) {
       setTarefaParaDeletar(null);
-      fetchTasks();
+      fetchTasks(); // Atualiza o estado centralizado no Layout
+      dispararSucesso("A tarefa foi removida definitivamente do seu cronograma.");
     } else {
       alert("Não foi possível excluir a tarefa.");
     }
@@ -92,7 +96,8 @@ function CalendarioPage() {
     const res = await handleUpdateTask(tarefaConcluida);
     if (res.success) {
       setTarefaParaConcluir(null);
-      fetchTasks();
+      fetchTasks(); // Atualiza o estado centralizado no Layout
+      dispararSucesso("Ótimo! Tarefa concluída e atualizada no painel visual.");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -118,7 +123,7 @@ function CalendarioPage() {
                 tileContent={({ date, view }) => {
                   if (
                     view === "month" &&
-                    tasks.some((t) => t.dataLimite === formatarData(date))
+                    tasksGlobais.some((t) => t.dataLimite === formatarData(date))
                   ) {
                     return (
                       <div className="h-1.5 w-1.5 bg-indigo-500 rounded-full mx-auto mt-1 shadow-[0_0_5px_rgba(99,102,241,0.8)]"></div>
@@ -159,10 +164,10 @@ function CalendarioPage() {
                 <Tabela
                   tasks={tarefasDoDia}
                   onToggle={(id) =>
-                    setTarefaParaConcluir(tasks.find((t) => t.id === id))
+                    setTarefaParaConcluir(tasksGlobais.find((t) => t.id === id))
                   }
                   onDelete={(id) =>
-                    setTarefaParaDeletar(tasks.find((t) => t.id === id))
+                    setTarefaParaDeletar(tasksGlobais.find((t) => t.id === id))
                   }
                   onEdit={(task) =>
                     !task.concluida && setTarefaParaEditar(task)
@@ -172,7 +177,7 @@ function CalendarioPage() {
               ) : (
                 <div className="h-40 flex flex-col items-center justify-center text-slate-500 space-y-2 bg-slate-800/10">
                   <p className="text-sm italic font-medium">
-                    Nenhuma tarefa agendada para este dia.
+                    Nenhuma tarefa encontrada para este dia.
                   </p>
                 </div>
               )}
@@ -181,7 +186,7 @@ function CalendarioPage() {
         </main>
       </div>
 
-      {/* MODAIS */}
+      {/* MODAIS COMPORTAMENTAIS */}
       <TaskDetailModal
         task={tarefaSelecionada}
         onClose={() => setTarefaSelecionada(null)}
@@ -208,6 +213,13 @@ function CalendarioPage() {
         taskTitle={tarefaParaConcluir?.titulo}
         onClose={() => setTarefaParaConcluir(null)}
         onConfirm={onConfirmDone}
+      />
+
+      {/* MODAL DE ALERTAS DE SUCESSO (FECHA AO CLICAR FORA) */}
+      <SuccessModal 
+        isOpen={isSuccessOpen} 
+        onClose={() => setIsSuccessOpen(false)} 
+        mensagem={successMessage} 
       />
     </>
   );

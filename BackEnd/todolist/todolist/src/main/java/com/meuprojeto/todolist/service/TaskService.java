@@ -48,6 +48,15 @@ public class TaskService {
         return tasks;
     }
 
+    public List<Task> searchByName(String name){
+        List<Task> tasks = taskRepository.searchByName(name);
+        tasks.forEach(task -> {
+            task.ajustarPrioridadePorAtraso();
+            taskRepository.save(task);
+        });
+        return tasks;
+    }
+
     @Transactional
     public Task updateTask(TaskRequestDTO taskDTO, UUID id) {
         Task taskExistente = taskRepository.findById(id).orElseThrow(

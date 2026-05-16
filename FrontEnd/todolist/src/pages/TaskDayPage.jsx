@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useOutletContext } from "react-router-dom"; // Hook para sincronizar com o Layout
 import Tabela from "../components/tabela";
 import TaskDetailModal from "../components/taskdetailmodal";
@@ -6,45 +6,53 @@ import AddTaskModal from "../components/addtaskmodal";
 import UpdateTaskModal from "../components/updatetaskmodal";
 import ConfirmDeleteModal from "../components/confirmdeletemodel";
 import ConfirmDoneModal from "../components/confirmdonemodal";
-
-// Hook de lógica compartilhada
+import SuccessModal from "../components/successmodal"; 
 import { useTasks } from "../hooks/useTasks";
 
 function TasksDayPage() {
-  const {
-    tasks,
-    fetchTasks,
-    handleAddTask,
-    handleUpdateTask,
-    handleDeleteTask,
-  } = useTasks();
+  // 1. CONSUMO DO CONTEXTO GLOBAL DO LAYOUT
+  const { tasks: tasksGlobais, fetchTasks, isAddModalOpen, setIsAddModalOpen } = useOutletContext();
+  
+  // O hook local gerencia apenas as operações de escrita (POST, PUT, DELETE)
+  const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
 
-  // Pegamos o estado do modal controlado pelo Layout.jsx
-  const { isAddModalOpen, setIsAddModalOpen } = useOutletContext();
-
-  // 1. ESTADOS DE INTERFACE
+  // 2. ESTADOS DE INTERFACE
   const [tarefaSelecionada, setTarefaSelecionada] = useState(null);
   const [tarefaParaEditar, setTarefaParaEditar] = useState(null);
   const [tarefaParaDeletar, setTarefaParaDeletar] = useState(null);
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState(null);
 
-  const endpointToday = "/tasks/today";
+  // ESTADOS DO MODAL DE SUCESSO
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
+  // FUNÇÃO AUXILIAR PARA DISPARAR O SUCESSO
+  const dispararSucesso = (mensagem) => {
+    setSuccessMessage(mensagem);
+    setIsSuccessOpen(true);
+  };
 
-  // --- LÓGICA DE ESTATÍSTICAS ---
+  // 3. LÓGICA DE FILTRAGEM POR DATA (APENAS HOJE)
   const hoje = new Date().toISOString().split("T")[0];
-  const total = tasks.length;
-  const concluidas = tasks.filter((t) => t.concluida).length;
+
+  const tasksFiltradasDoDia = tasksGlobais.filter(
+    (t) => t.dataLimite === hoje
+  );
+
+  // 4. MÉTRICAS E ESTATÍSTICAS BASEADAS APENAS NO DIA DE HOJE
+  const total = tasksFiltradasDoDia.length;
+  const concluidas = tasksFiltradasDoDia.filter((t) => t.concluida).length;
   const pendentes = total - concluidas;
-  const atrasadas = tasks.filter((t) => !t.concluida && t.dataLimite < hoje).length;
+  const atrasadas = tasksFiltradasDoDia.filter((t) => !t.concluida && t.dataLimite < hoje).length;
   const porcentagem = total > 0 ? Math.round((concluidas / total) * 100) : 0;
 
-  // 3. FUNÇÕES DE MANIPULAÇÃO
+  // 5. FUNÇÕES DE MANIPULAÇÃO (CRUD) COM RETORNO DE SUCESSO
   const onAdd = async (newTask) => {
     const res = await handleAddTask(newTask);
     if (res.success) {
       setIsAddModalOpen(false);
-      fetchTasks(endpointToday);
+      fetchTasks(); // Atualiza o estado global no Layout
+      dispararSucesso("Sua tarefa do dia foi criada e agendada com sucesso!");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -54,7 +62,8 @@ function TasksDayPage() {
     const res = await handleUpdateTask(updatedTask);
     if (res.success) {
       setTarefaParaEditar(null);
-      fetchTasks(endpointToday);
+      fetchTasks(); // Atualiza o estado global no Layout
+      dispararSucesso("A tarefa da jornada de hoje foi atualizada com sucesso.");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -64,7 +73,8 @@ function TasksDayPage() {
     const res = await handleDeleteTask(tarefaParaDeletar.id);
     if (res.success) {
       setTarefaParaDeletar(null);
-      fetchTasks(endpointToday);
+      fetchTasks(); // Atualiza o estado global no Layout
+      dispararSucesso("A tarefa foi removida da sua lista de hoje.");
     } else {
       alert("Não foi possível excluir a tarefa.");
     }
@@ -75,7 +85,8 @@ function TasksDayPage() {
     const res = await handleUpdateTask(tarefaConcluida);
     if (res.success) {
       setTarefaParaConcluir(null);
-      fetchTasks(endpointToday);
+      fetchTasks(); // Atualiza o estado global no Layout
+      dispararSucesso("Boa! Mais uma tarefa finalizada no dia de hoje.");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -91,18 +102,12 @@ function TasksDayPage() {
   };
 
   const handleToggleStatus = (id) => {
-    const task = tasks.find((t) => t.id === id);
+    const task = tasksFiltradasDoDia.find((t) => t.id === id);
     if (task && !task.concluida) setTarefaParaConcluir(task);
   };
 
-  useEffect(() => {
-  fetchTasks(); 
-}, []);
-
   return (
     <>
-      
-
       <div className="animate-in fade-in duration-500 space-y-6">
         {/* CABEÇALHO E VISÃO GERAL */}
         <section className="space-y-4">
@@ -115,7 +120,6 @@ function TasksDayPage() {
                 Foco nas entregas programadas para este dia.
               </p>
             </div>
-            {/* O botão foi removido daqui pois já existe na Navbar */}
           </header>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -169,13 +173,13 @@ function TasksDayPage() {
         {/* LISTAGEM */}
         <section className="pb-6">
           <h2 className="text-lg font-bold text-white mb-3">
-            Afazeres para {hoje === new Date().toISOString().split("T")[0] ? "Hoje" : hoje}
+            Afazeres para Hoje
           </h2>
           <div className="bg-slate-800/30 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
             <Tabela
-              tasks={tasks}
+              tasks={tasksFiltradasDoDia}
               onToggle={handleToggleStatus}
-              onDelete={(id) => setTarefaParaDeletar(tasks.find((t) => t.id === id))}
+              onDelete={(id) => setTarefaParaDeletar(tasksFiltradasDoDia.find((t) => t.id === id))}
               onEdit={(task) => !task.concluida && setTarefaParaEditar(task)}
               onShowDetail={(task) => setTarefaSelecionada(task)}
             />
@@ -183,9 +187,9 @@ function TasksDayPage() {
         </section>
       </div>
 
+      {/* MODAIS COMPORTAMENTAIS */}
       <TaskDetailModal task={tarefaSelecionada} onClose={() => setTarefaSelecionada(null)} />
       
-      {/* O modal agora é disparado pelo estado vindo do Layout (Navbar) */}
       <AddTaskModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
@@ -211,6 +215,13 @@ function TasksDayPage() {
         taskTitle={tarefaParaConcluir?.titulo}
         onClose={() => setTarefaParaConcluir(null)}
         onConfirm={onConfirmDone}
+      />
+
+      {/* MODAL DE COMPROMISSO DE SUCESSO */}
+      <SuccessModal 
+        isOpen={isSuccessOpen} 
+        onClose={() => setIsSuccessOpen(false)} 
+        mensagem={successMessage} 
       />
     </>
   );

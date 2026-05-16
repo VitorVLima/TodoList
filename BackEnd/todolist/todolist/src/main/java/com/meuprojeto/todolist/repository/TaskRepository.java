@@ -3,6 +3,7 @@ package com.meuprojeto.todolist.repository;
 import com.meuprojeto.todolist.entitys.task.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -42,4 +43,10 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             t.titulo ASC
     """)
     List<Task> findAllToday();
+
+    @Query("""
+    SELECT t FROM Task t 
+    WHERE (:name IS NULL OR :name = '' OR LOWER(t.titulo) LIKE LOWER(CONCAT('%', :name, '%')))
+""")
+    List<Task> searchByName(@Param("name") String name);
 }

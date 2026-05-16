@@ -1,24 +1,38 @@
-import React, { useState, useEffect } from "react";
-import { useOutletContext } from "react-router-dom"; // Hook para pegar o estado do Layout
+import React, { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import Tabela from "../components/tabela";
 import TaskDetailModal from "../components/taskdetailmodal";
 import AddTaskModal from "../components/addtaskmodal";
 import UpdateTaskModal from "../components/updatetaskmodal";
 import ConfirmDeleteModal from "../components/confirmdeletemodel";
 import ConfirmDoneModal from "../components/confirmdonemodal";
+import SuccessModal from "../components/successModal"; // Certifique-se de criar este arquivo na pasta components
 import { useTasks } from "../hooks/useTasks";
 
 function Home() {
-  const { tasks, fetchTasks, handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
+  // Pegamos a lista dinâmica 'tasks' e a função 'fetchTasks' injetadas pelo Layout
+  const { tasks, fetchTasks, isAddModalOpen, setIsAddModalOpen } = useOutletContext();
   
-  // Pegamos o estado do modal que o Layout está controlando
-  const { isAddModalOpen, setIsAddModalOpen } = useOutletContext();
+  // O hook local gerencia apenas as operações de escrita (POST, PUT, DELETE)
+  const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
 
+  // ESTADOS DOS MODAIS DE INTERAÇÃO
   const [tarefaSelecionada, setTarefaSelecionada] = useState(null);
   const [tarefaParaEditar, setTarefaParaEditar] = useState(null);
   const [tarefaParaDeletar, setTarefaParaDeletar] = useState(null);
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState(null);
 
+  // ESTADOS DO MODAL DE SUCESSO
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // FUNÇÃO AUXILIAR PARA DISPARAR O MODAL DE SUCESSO
+  const dispararSucesso = (mensagem) => {
+    setSuccessMessage(mensagem);
+    setIsSuccessOpen(true);
+  };
+
+  // CÁLCULO DE MÉTRICAS E PROGRESSED
   const hoje = new Date().toISOString().split("T")[0]; 
   const total = tasks.length;
   const concluidas = tasks.filter(t => t.concluida).length;
@@ -26,11 +40,13 @@ function Home() {
   const atrasadas = tasks.filter(t => !t.concluida && t.dataLimite < hoje).length;
   const porcentagem = total > 0 ? Math.round((concluidas / total) * 100) : 0;
 
+  // FUNÇÕES CRUD COM FEEDBACK DE SUCESSO
   const onAdd = async (newTask) => {
     const res = await handleAddTask(newTask);
     if (res.success) {
       setIsAddModalOpen(false);
       fetchTasks(); 
+      dispararSucesso("Sua nova tarefa foi criada e salva com sucesso!");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -41,6 +57,7 @@ function Home() {
     if (res.success) {
       setTarefaParaEditar(null);
       fetchTasks();
+      dispararSucesso("A tarefa foi atualizada e sincronizada com o servidor.");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -51,6 +68,7 @@ function Home() {
     if (res.success) {
       setTarefaParaDeletar(null);
       fetchTasks();
+      dispararSucesso("A tarefa foi excluída permanentemente do sistema.");
     } else {
       alert("Não foi possível excluir a tarefa.");
     }
@@ -62,6 +80,7 @@ function Home() {
     if (res.success) {
       setTarefaParaConcluir(null);
       fetchTasks();
+      dispararSucesso("Parabéns! A tarefa foi marcada como concluída.");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -76,20 +95,13 @@ function Home() {
     }
   };
 
-  useEffect(() => {
-  fetchTasks(); 
-}, []);
-
   return (
     <>
-      
-
       <div className="animate-in fade-in duration-500 space-y-6">
-        
+        {/* SEÇÃO CARD INDICADORES (MÉTRICAS) */}
         <section className="space-y-4">
           <header className="flex justify-between items-center">
             <h1 className="text-xl font-bold text-white uppercase tracking-tight">Visão Geral</h1>
-            {/* Botão removido daqui, pois já está na Navbar */}
           </header>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -111,6 +123,7 @@ function Home() {
             </div>
           </div>
 
+          {/* BARRA DE PROGRESSO */}
           <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-2xl space-y-2 shadow-inner">
             <div className="flex justify-between items-center px-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progresso da Lista</span>
@@ -125,6 +138,7 @@ function Home() {
           </div>
         </section>
 
+        {/* SEÇÃO DA TABELA PRINCIPAL */}
         <section className="pb-6">
           <h2 className="text-lg font-bold text-white mb-3">Minhas Tarefas</h2>
           <div className="bg-slate-800/30 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
@@ -139,9 +153,9 @@ function Home() {
         </section>
       </div>
 
+      {/* MODAIS DA PÁGINA */}
       <TaskDetailModal task={tarefaSelecionada} onClose={() => setTarefaSelecionada(null)} />
       
-      {/* O modal agora usa o estado controlado pelo Layout */}
       <AddTaskModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
@@ -167,6 +181,13 @@ function Home() {
         taskTitle={tarefaParaConcluir?.titulo} 
         onClose={() => setTarefaParaConcluir(null)} 
         onConfirm={onConfirmDone} 
+      />
+
+      {/* NOVO MODAL DE CONFIRMAÇÃO DE SUCESSO */}
+      <SuccessModal 
+        isOpen={isSuccessOpen} 
+        onClose={() => setIsSuccessOpen(false)} 
+        mensagem={successMessage} 
       />
     </>
   );

@@ -9,25 +9,58 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
     dataLimite: "",
   });
 
+  // Estados para controlar se o campo foi tocado (blur)
+  const [tituloTocado, setTituloTocado] = useState(false);
+  const [descricaoTocada, setDescricaoTocada] = useState(false);
+  const [dataTocada, setDataTocada] = useState(false);
+
+  // Estado para capturar o clique em "Criar Tarefa"
+  const [tentouSubmeter, setTentouSubmeter] = useState(false);
+
   if (!isOpen) return null;
+
+  // Validações em tempo real
+  const tituloInvalido = taskData.titulo.trim() === "";
+  const descricaoInvalida = taskData.descricao.trim() === "";
+  const dataInvalida = taskData.dataLimite === "" || isNaN(Date.parse(taskData.dataLimite));
+
+  // Condicionais para renderizar o estado visual de erro
+  const mostrarErroTitulo = tituloInvalido && (tituloTocado || tentouSubmeter);
+  const mostrarErroDescricao = descricaoInvalida && (descricaoTocada || tentouSubmeter);
+  const mostrarErroData = dataInvalida && (dataTocada || tentouSubmeter);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!taskData.titulo) return alert("O título é obrigatório!");
+    setTentouSubmeter(true); // Força a validação visual de todos os campos
 
-    
+    // Bloqueia o envio se houver campos inválidos (sem disparar alert)
+    if (tituloInvalido || dataInvalida || descricaoInvalida) return;
+
     onAdd({
       ...taskData,
       concluida: false
     });
 
-    // Limpa o formulário e fecha
+    // Limpa o formulário, estados de validação e fecha o modal
     setTaskData({
       titulo: "",
       descricao: "",
       prioridade: "MEDIA",
       dataLimite: "",
     });
+    setTituloTocado(false);
+    setDataTocada(false);
+    setDescricaoTocada(false);
+    setTentouSubmeter(false);
+    onClose();
+  };
+
+  // Reseta os estados de erro caso o usuário decida fechar o modal sem salvar
+  const handleClose = () => {
+    setTituloTocado(false);
+    setDescricaoTocada(false);
+    setDataTocada(false);
+    setTentouSubmeter(false);
     onClose();
   };
 
@@ -36,7 +69,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-backdrop"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-modal"
@@ -51,7 +84,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
             <h2 className="text-xl font-bold text-white">Nova Tarefa</h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-slate-500 hover:text-white transition-colors cursor-pointer p-1"
           >
             <X size={24} />
@@ -67,12 +100,20 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
             <input
               type="text"
               placeholder="Ex: Finalizar CRUD de Produtos"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-600 shadow-inner"
+              onBlur={() => setTituloTocado(true)}
+              className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600 shadow-inner ${
+                mostrarErroTitulo
+                  ? "border-red-500 focus:ring-2 focus:ring-red-500"
+                  : "border-slate-700 focus:ring-2 focus:ring-indigo-500"
+              }`}
               value={taskData.titulo}
               onChange={(e) =>
                 setTaskData({ ...taskData, titulo: e.target.value })
               }
             />
+            {mostrarErroTitulo && (
+              <p className="text-red-500 text-xs font-medium mt-1">Por favor, não deixe o campo vazio.</p>
+            )}
           </div>
 
           {/* DESCRIÇÃO */}
@@ -82,13 +123,21 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
             </label>
             <textarea
               placeholder="Detalhes sobre o que precisa ser feito..."
+              onBlur={() => setDescricaoTocada(true)}
               rows="3"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-600 resize-none shadow-inner"
+              className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600 resize-none shadow-inner ${
+                mostrarErroDescricao
+                  ? "border-red-500 focus:ring-2 focus:ring-red-500"
+                  : "border-slate-700 focus:ring-2 focus:ring-indigo-500"
+              }`}
               value={taskData.descricao}
               onChange={(e) =>
                 setTaskData({ ...taskData, descricao: e.target.value })
               }
             />
+            {mostrarErroDescricao && (
+              <p className="text-red-500 text-xs font-medium mt-1">Por favor, preencha a descrição da tarefa.</p>
+            )}
           </div>
 
           {/* PRIORIDADE */}
@@ -114,7 +163,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
             </div>
           </div>
 
-          {/* DATA LIMITE (CALENDÁRIO ESTILIZADO) */}
+          {/* DATA LIMITE */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 tracking-widest">
               <CalendarIcon size={14} /> Prazo Final
@@ -123,22 +172,29 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
               <input
                 type="date"
                 min={hoje}
+                onBlur={() => setDataTocada(true)}
                 value={taskData.dataLimite}
                 onChange={(e) =>
                   setTaskData({ ...taskData, dataLimite: e.target.value })
                 }
-                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 
-                  outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 
-                  transition-all appearance-none cursor-pointer [color-scheme:dark] shadow-inner"
+                className={`w-full bg-slate-800/50 border rounded-xl px-4 py-3 text-slate-200 
+                  outline-none transition-all appearance-none cursor-pointer [color-scheme:dark] shadow-inner ${
+                    mostrarErroData
+                      ? "border-red-500 focus:ring-2 focus:ring-red-500"
+                      : "border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  }`}
               />
             </div>
+            {mostrarErroData && (
+              <p className="text-red-500 text-xs font-medium mt-1">Insira uma data válida e não deixe o campo vazio.</p>
+            )}
           </div>
 
           {/* BOTÕES DE AÇÃO */}
           <div className="flex gap-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 py-3.5 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 transition-all cursor-pointer"
             >
               Cancelar
