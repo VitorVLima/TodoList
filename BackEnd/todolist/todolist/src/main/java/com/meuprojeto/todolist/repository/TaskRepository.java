@@ -45,8 +45,19 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     List<Task> findAllToday();
 
     @Query("""
-    SELECT t FROM Task t 
-    WHERE (:name IS NULL OR :name = '' OR LOWER(t.titulo) LIKE LOWER(CONCAT('%', :name, '%')))
-""")
-    List<Task> searchByName(@Param("name") String name);
+        SELECT t FROM Task t 
+        WHERE (:name IS NULL OR :name = '' OR LOWER(t.titulo) LIKE LOWER(CONCAT('%', :name, '%')))
+        AND (
+            LOWER(:statusFiltro) = 'todas as tarefas' 
+            OR (LOWER(:statusFiltro) = 'ativas' AND t.concluida = false)
+            OR (LOWER(:statusFiltro) = 'concluídas' AND t.concluida = true)
+            OR (LOWER(:statusFiltro) = 'prioridades' AND t.prioridade = 'ALTA')
+        )
+    """)
+    List<Task> searchByNameAndFilter(
+            @Param("name") String name,
+            @Param("statusFiltro") String statusFiltro
+    );
+
+    void deleteByConcluidaTrue();
 }

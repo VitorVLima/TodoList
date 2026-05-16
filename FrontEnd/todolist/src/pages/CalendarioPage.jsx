@@ -13,8 +13,8 @@ import SuccessModal from "../components/SuccessModal"; // Importado o Modal de S
 import { useTasks } from "../hooks/useTasks";
 
 function CalendarioPage() {
-  // 1. CONSUMO DO CONTEXTO COMPARTILHADO DO LAYOUT
-  const { tasks: tasksGlobais, fetchTasks, isAddModalOpen, setIsAddModalOpen } = useOutletContext();
+  // ATUALIZADO: Capturamos também o 'filtroAtivo' que o Layout.jsx injeta no Outlet
+  const { tasks: tasksGlobais, fetchTasks, isAddModalOpen, setIsAddModalOpen, filtroAtivo } = useOutletContext();
 
   // O hook local gerencia estritamente as operações de mutação (POST, PUT, DELETE)
   const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
@@ -108,7 +108,7 @@ function CalendarioPage() {
       <div className="animate-in fade-in duration-500 flex flex-col gap-4 w-full">
         <header>
           <h1 className="text-xl font-bold text-white uppercase tracking-tight">
-            📅 Planejamento Visual
+            📅 Planejamento Visual — {filtroAtivo || "Todas as Tarefas"}
           </h1>
         </header>
 
@@ -153,7 +153,9 @@ function CalendarioPage() {
           {/* COLUNA DA TABELA */}
           <div className="flex flex-col gap-3 w-full">
             <div className="flex justify-between items-center px-1">
-              <h2 className="text-lg font-bold text-white">Tarefas do Dia</h2>
+              <h2 className="text-lg font-bold text-white">
+                {filtroAtivo === "Todas as Tarefas" ? "Tarefas do Dia" : `Filtrado por: ${filtroAtivo}`}
+              </h2>
               <span className="bg-slate-800 text-slate-500 text-[10px] px-2 py-1 rounded-md font-mono uppercase">
                 {tarefasDoDia.length} Itens
               </span>
@@ -177,7 +179,7 @@ function CalendarioPage() {
               ) : (
                 <div className="h-40 flex flex-col items-center justify-center text-slate-500 space-y-2 bg-slate-800/10">
                   <p className="text-sm italic font-medium">
-                    Nenhuma tarefa encontrada para este dia.
+                    Nenhuma tarefa correspondente encontrada para este dia.
                   </p>
                 </div>
               )}

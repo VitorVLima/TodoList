@@ -6,12 +6,12 @@ import AddTaskModal from "../components/addtaskmodal";
 import UpdateTaskModal from "../components/updatetaskmodal";
 import ConfirmDeleteModal from "../components/confirmdeletemodel";
 import ConfirmDoneModal from "../components/confirmdonemodal";
-import SuccessModal from "../components/successmodal"; 
+import SuccessModal from "../components/successModal"; // Certifique-se de manter a importação correta
 import { useTasks } from "../hooks/useTasks";
 
 function TasksDayPage() {
-  // 1. CONSUMO DO CONTEXTO GLOBAL DO LAYOUT
-  const { tasks: tasksGlobais, fetchTasks, isAddModalOpen, setIsAddModalOpen } = useOutletContext();
+  // ATUALIZADO: Capturamos também o 'filtroAtivo' que o Layout.jsx injeta no Outlet
+  const { tasks: tasksGlobais, fetchTasks, isAddModalOpen, setIsAddModalOpen, filtroAtivo } = useOutletContext();
   
   // O hook local gerencia apenas as operações de escrita (POST, PUT, DELETE)
   const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
@@ -35,6 +35,7 @@ function TasksDayPage() {
   // 3. LÓGICA DE FILTRAGEM POR DATA (APENAS HOJE)
   const hoje = new Date().toISOString().split("T")[0];
 
+  // Filtramos as tarefas vindas do backend para garantir que apareçam APENAS as de hoje
   const tasksFiltradasDoDia = tasksGlobais.filter(
     (t) => t.dataLimite === hoje
   );
@@ -114,10 +115,10 @@ function TasksDayPage() {
           <header className="flex justify-between items-center">
             <div>
               <h1 className="text-xl font-bold text-white uppercase tracking-tight">
-                📅 Jornada de Hoje
+                📅 Jornada de Hoje — {filtroAtivo || "Todas as Tarefas"}
               </h1>
               <p className="text-slate-400 text-xs mt-1">
-                Foco nas entregas programadas para este dia.
+                Foco nas entregas programadas para este dia combinadas com seus filtros de busca.
               </p>
             </div>
           </header>
@@ -173,7 +174,7 @@ function TasksDayPage() {
         {/* LISTAGEM */}
         <section className="pb-6">
           <h2 className="text-lg font-bold text-white mb-3">
-            Afazeres para Hoje
+            {filtroAtivo === "Todas as Tarefas" ? "Afazeres para Hoje" : `Hoje filtrado por: ${filtroAtivo}`}
           </h2>
           <div className="bg-slate-800/30 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
             <Tabela
@@ -217,7 +218,7 @@ function TasksDayPage() {
         onConfirm={onConfirmDone}
       />
 
-      {/* MODAL DE COMPROMISSO DE SUCESSO */}
+      {/* MODAL DE CONFIRMAÇÃO DE SUCESSO (FECHA AO CLICAR FORA) */}
       <SuccessModal 
         isOpen={isSuccessOpen} 
         onClose={() => setIsSuccessOpen(false)} 

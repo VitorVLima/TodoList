@@ -5,6 +5,7 @@ import com.meuprojeto.todolist.entitys.task.TaskRequestDTO;
 import com.meuprojeto.todolist.exceptions.RecursoNaoEncontradoException;
 import com.meuprojeto.todolist.repository.TaskRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -48,8 +49,8 @@ public class TaskService {
         return tasks;
     }
 
-    public List<Task> searchByName(String name){
-        List<Task> tasks = taskRepository.searchByName(name);
+    public List<Task> searchByName(String name, String statusFiltro){
+        List<Task> tasks = taskRepository.searchByNameAndFilter(name, statusFiltro);
         tasks.forEach(task -> {
             task.ajustarPrioridadePorAtraso();
             taskRepository.save(task);
@@ -78,5 +79,11 @@ public class TaskService {
             throw new RecursoNaoEncontradoException("Tarefa Não Existe");
         }
         taskRepository.deleteById(id);
+    }
+
+    @Modifying
+    @Transactional
+    public void deleteAllTasksConcluidas(){
+        taskRepository.deleteByConcluidaTrue();
     }
 }

@@ -44,8 +44,14 @@ public class TaskController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<TaskResponseDTO>> searchByName(@RequestParam(required = false) String name){
-        List<Task> tasks = taskService.searchByName(name);
+    public ResponseEntity<List<TaskResponseDTO>> searchByName(
+            @RequestParam(required = false) String name,
+            @RequestParam(value = "statusFiltro", defaultValue = "Todas as Tarefas") String statusFiltro){
+
+        // Log para acompanhar no console do Eclipse/IntelliJ/VSCode
+        System.out.println("Filtro recebido no Java: " + statusFiltro);
+
+        List<Task> tasks = taskService.searchByName(name, statusFiltro);
         List<TaskResponseDTO> response = tasks.stream().map(TaskResponseDTO::new).toList();
         return ResponseEntity.ok(response);
     }
@@ -60,6 +66,12 @@ public class TaskController {
     @DeleteMapping("/{id}")
     public ResponseEntity deleteTask(@PathVariable UUID id){
         taskService.deleteTask(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/clear-concluidas")
+    public ResponseEntity deleteTaskConcluidas(){
+        taskService.deleteAllTasksConcluidas();
         return ResponseEntity.ok().build();
     }
 }

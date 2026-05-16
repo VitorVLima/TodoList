@@ -6,12 +6,12 @@ import AddTaskModal from "../components/addtaskmodal";
 import UpdateTaskModal from "../components/updatetaskmodal";
 import ConfirmDeleteModal from "../components/confirmdeletemodel";
 import ConfirmDoneModal from "../components/confirmdonemodal";
-import SuccessModal from "../components/successModal"; // Certifique-se de criar este arquivo na pasta components
+import SuccessModal from "../components/successModal"; // Certifique-se de manter a importação correta
 import { useTasks } from "../hooks/useTasks";
 
 function Home() {
-  // Pegamos a lista dinâmica 'tasks' e a função 'fetchTasks' injetadas pelo Layout
-  const { tasks, fetchTasks, isAddModalOpen, setIsAddModalOpen } = useOutletContext();
+  // ATUALIZADO: Capturamos também o 'filtroAtivo' que o Layout.jsx injeta no Outlet
+  const { tasks, fetchTasks, isAddModalOpen, setIsAddModalOpen, filtroAtivo } = useOutletContext();
   
   // O hook local gerencia apenas as operações de escrita (POST, PUT, DELETE)
   const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
@@ -34,6 +34,8 @@ function Home() {
 
   // CÁLCULO DE MÉTRICAS E PROGRESSED
   const hoje = new Date().toISOString().split("T")[0]; 
+  
+  // As métricas de exibição dos cards superiores devem refletir a lista atual entregue pelo servidor
   const total = tasks.length;
   const concluidas = tasks.filter(t => t.concluida).length;
   const pendentes = total - concluidas;
@@ -101,12 +103,15 @@ function Home() {
         {/* SEÇÃO CARD INDICADORES (MÉTRICAS) */}
         <section className="space-y-4">
           <header className="flex justify-between items-center">
-            <h1 className="text-xl font-bold text-white uppercase tracking-tight">Visão Geral</h1>
+            {/* Dinamismo visual: Altera o título da seção de acordo com o filtro clicado */}
+            <h1 className="text-xl font-bold text-white uppercase tracking-tight">
+              Visão Geral — {filtroAtivo || "Todas as Tarefas"}
+            </h1>
           </header>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 flex flex-col justify-center">
-              <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest">Total</p>
+              <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest">Exibindo</p>
               <p className="text-2xl font-bold text-white">{total}</p>
             </div>
             <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 border-l-4 border-l-blue-500 flex flex-col justify-center">
@@ -126,7 +131,7 @@ function Home() {
           {/* BARRA DE PROGRESSO */}
           <div className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-2xl space-y-2 shadow-inner">
             <div className="flex justify-between items-center px-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progresso da Lista</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progresso Observado</span>
               <span className="text-xs font-bold text-emerald-400">{porcentagem}%</span>
             </div>
             <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden shadow-inner">
@@ -140,7 +145,9 @@ function Home() {
 
         {/* SEÇÃO DA TABELA PRINCIPAL */}
         <section className="pb-6">
-          <h2 className="text-lg font-bold text-white mb-3">Minhas Tarefas</h2>
+          <h2 className="text-lg font-bold text-white mb-3">
+            {filtroAtivo === "Todas as Tarefas" ? "Minhas Tarefas" : `Filtrado por: ${filtroAtivo}`}
+          </h2>
           <div className="bg-slate-800/30 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
             <Tabela
               tasks={tasks}
@@ -183,7 +190,7 @@ function Home() {
         onConfirm={onConfirmDone} 
       />
 
-      {/* NOVO MODAL DE CONFIRMAÇÃO DE SUCESSO */}
+      {/* MODAL DE CONFIRMAÇÃO DE SUCESSO */}
       <SuccessModal 
         isOpen={isSuccessOpen} 
         onClose={() => setIsSuccessOpen(false)} 

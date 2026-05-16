@@ -8,18 +8,19 @@ import { useTasks } from "../hooks/useTasks";
 const Layout = () => {
   const { tasks, fetchTasks, searchTasks } = useTasks();
   
-  // 1. Estados de Interface
+  // 1. Estados de Interface e Filtros Globais
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("sidebarStatus");
     return saved !== null ? JSON.parse(saved) : false;
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [termoBusca, setTermoBusca] = useState("");
+  const [filtroAtivo, setFiltroAtivo] = useState("Todas as Tarefas"); // <-- ADICIONADO
   
   // 2. Estado de Carregamento Global
   const [isLoading, setIsLoading] = useState(true);
 
-  // 3. Busca de dados inicial
+  // 3. Busca de dados inicial (Apenas na montagem do app)
   useEffect(() => {
     const loadAppData = async () => {
       try {
@@ -33,16 +34,15 @@ const Layout = () => {
     loadAppData();
   }, []);
 
-  // 4. Monitor do campo de pesquisa (Efeito Debounce Simplificado)
+  // 4. ATUALIZADO: Monitor unificado do campo de pesquisa e botões de filtro
   useEffect(() => {
-    if (isLoading) return; // Não busca se estiver no loading inicial
+    if (isLoading) return; // Não faz requisições se estiver no carregamento inicial
 
-    if (termoBusca.trim() === "") {
-      fetchTasks(); // Se apagar o texto, traz tudo de volta
-    } else {
-      searchTasks(termoBusca); // Chama o endpoint do Spring Boot @GetMapping("/search")
-    }
-  }, [termoBusca]);
+    // O Spring Boot agora gerencia a combinação de nome + filtro ativo na mesma rota.
+    // Se o termoBusca for "", a query JPA traz todos os registros daquele filtro específico.
+    searchTasks(termoBusca, filtroAtivo);
+
+  }, [termoBusca, filtroAtivo]); // Dispara a busca quando o texto muda OU quando um filtro é clicado
 
   const toggleSidebar = () => {
     const newState = !isSidebarOpen;
@@ -56,10 +56,13 @@ const Layout = () => {
 
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} h-screen overflow-y-auto bg-slate-900 text-slate-200`}>
         
+        {/* Passamos o estado e o alterador do filtro para a Navbar */}
         <Navbar 
           onOpenAddModal={() => setIsAddModalOpen(true)} 
           termoBusca={termoBusca}
           setTermoBusca={setTermoBusca}
+          filtroAtivo={filtroAtivo}     // <-- PASSEI VIA PROP
+          setFiltroAtivo={setFiltroAtivo} // <-- PASSEI VIA PROP
         />
 
         <main className="px-2 md:px-4 py-6 w-full max-w-[98%] mx-auto">
@@ -68,8 +71,8 @@ const Layout = () => {
                <LoadingScreen />
             </div>
           ) : (
-            /* Passamos os dados atualizados da busca via context do Outlet */
-            <Outlet context={{ tasks, isAddModalOpen, setIsAddModalOpen, fetchTasks }} />
+            /* Adicionado o filtroAtivo no context para as páginas filhas usarem se necessário */
+            <Outlet context={{ tasks, isAddModalOpen, setIsAddModalOpen, fetchTasks, filtroAtivo }} />
           )}
         </main>
       </div>

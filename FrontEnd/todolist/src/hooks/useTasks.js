@@ -45,19 +45,35 @@ export function useTasks() {
     }
   };
 
-  const searchTasks = async (name) => {
+  // ATUALIZADO: Agora aceita o termo de busca por nome E o botão de filtro ativo da Navbar
+  const searchTasks = async (name = "", statusFiltro = "Todas as Tarefas") => {
     setLoading(true);
     try {
       const response = await api.get("/tasks/search", {
-        params: { name: name }
+        // O Axios anexa automaticamente na URL como: /tasks/search?name=...&statusFiltro=...
+        params: { 
+          name: name,
+          statusFiltro: statusFiltro 
+        }
       });
       setTasks(response.data); 
     } catch (error) {
-      console.error("Erro ao pesquisar tarefas:", error);
+      console.error("Erro ao pesquisar tarefas com filtros:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleDeleteTasksConcluidas = async () => {
+  try {
+    // Aponta exatamente para o @DeleteMapping("/concluidas") mapeado no seu Spring Boot Controller
+    await api.delete("/tasks/clear-concluidas");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao apagar tarefas concluídas:", error);
+    return { success: false, error: error.response?.data };
+  }
+};
 
   return {
     tasks,
@@ -67,5 +83,6 @@ export function useTasks() {
     handleAddTask,
     handleUpdateTask,
     handleDeleteTask,
+    handleDeleteTasksConcluidas
   };
 }

@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import { useLocation } from "react-router-dom"; // Hook para identificar a página atual
 import { Plus, Search, X } from "lucide-react";
 
-function Navbar({ onOpenAddModal, termoBusca, setTermoBusca }) {
+// ATUALIZADO: Recebendo filtroAtivo e setFiltroAtivo via Props do Layout
+function Navbar({ onOpenAddModal, termoBusca, setTermoBusca, filtroAtivo, setFiltroAtivo }) {
   const location = useLocation();
-  const [filtroAtivo, setFiltroAtivo] = useState("Todas as Tarefas");
+
+  // ❌ REMOVIDO o useState local para não duplicar o estado com o Layout
+  // const [filtroAtivo, setFiltroAtivo] = useState("Todas as Tarefas");
 
   // Verifica se a rota atual é a de configurações
   const isConfigPage = location.pathname === "/config";
@@ -23,7 +26,7 @@ function Navbar({ onOpenAddModal, termoBusca, setTermoBusca }) {
     <nav className="text-slate-100 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30 bg-slate-900/50">
       {/* Header: Nome e Data */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 gap-2">
-        <h1 className="font-bold text-2xl tracking-tight">Olá, Estudante</h1>
+        <h1 className="font-bold text-2xl tracking-tight">Bem vindo</h1>
         <p className="capitalize text-sm text-slate-400 font-medium">{dataFormatada}</p>
       </div>
 
@@ -54,8 +57,8 @@ function Navbar({ onOpenAddModal, termoBusca, setTermoBusca }) {
               <button
                 key={nome}
                 disabled={isConfigPage} // Trava o clique nativo do botão
-                onClick={() => setFiltroAtivo(nome)}
-                className={`px-3 py-2.5 md:py-2 text-xs font-medium rounded-xl transition-all text-center ${
+                onClick={() => setFiltroAtivo(nome)} // Altera diretamente o estado centralizado no Layout
+                className={`px-3 py-2.5 md:py-2 text-xs font-medium rounded-xl transition-all text-center cursor-pointer ${
                   filtroAtivo === nome
                     ? "bg-slate-700 text-blue-400 shadow-sm border border-slate-600" 
                     : "text-slate-400 hover:bg-slate-800/80 hover:text-white"
@@ -74,7 +77,7 @@ function Navbar({ onOpenAddModal, termoBusca, setTermoBusca }) {
               disabled={isConfigPage} // Impede o usuário de digitar se estiver na config
               placeholder={isConfigPage ? "Pesquisa desabilitada..." : "Buscar..."}
               value={termoBusca || ""}
-              onChange={(e) => setTermoBusca(e.target.value)}
+              onChange={(e) => setTermoBusca(e.target.value)} // Altera dinamicamente o termo no Layout
               className="w-full bg-slate-900/50 h-11 md:h-10 rounded-xl pl-10 pr-10 text-sm text-white 
                          outline-none focus:ring-2 focus:ring-blue-500/50 border border-slate-700 
                          transition-all placeholder:text-slate-500 shadow-inner"
@@ -82,7 +85,7 @@ function Navbar({ onOpenAddModal, termoBusca, setTermoBusca }) {
             {termoBusca && !isConfigPage && (
               <button 
                 onClick={() => setTermoBusca("")} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors cursor-pointer"
               >
                 <X size={14} />
               </button>

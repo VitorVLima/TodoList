@@ -29,9 +29,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         isOpen ? "w-64" : "w-20"
       } bg-slate-950 h-screen text-white p-4 flex flex-col justify-between fixed transition-all duration-300 ease-in-out border-r border-slate-800 z-[100]`}
     >
-      <div className="overflow-hidden">
+      {/* CORRIGIDO: Removido overflow-hidden daqui para permitir que os tooltips saiam do container */}
+      <div className="flex flex-col flex-1">
+        
         {/* HEADER */}
-        <div className="flex items-center gap-2 mb-10 h-12"> 
+        <div className="flex items-center gap-2 mb-10 h-12 overflow-hidden"> 
           <button
             onClick={toggleSidebar}
             className="p-2 hover:bg-slate-800 rounded-lg transition-colors w-12 h-12 flex items-center justify-center flex-shrink-0 cursor-pointer"
@@ -59,7 +61,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
-              className={`flex items-center p-3 h-12 w-full rounded-xl transition-all group relative overflow-hidden ${
+              /* Mudança sutil: Adicionado cursor-pointer nativo do botão */
+              className={`flex items-center p-3 h-12 w-full rounded-xl transition-all group relative ${
                 location.pathname === item.path
                   ? "bg-slate-800 text-blue-400"
                   : "hover:bg-slate-900/50 text-slate-400 hover:text-white"
@@ -69,7 +72,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 {item.icon}
               </div>
 
-              {/* EFEITO DE TRANSPOSIÇÃO NOS ITENS */}
+              {/* TEXTO DO MENU (SÓ RENDERIZA OU EXPANDE SE A BARRA ESTIVER ABERTA) */}
               <div
                 className={`
                   transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap
@@ -79,11 +82,13 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 <span className="font-medium text-sm">{item.label}</span>
               </div>
 
+              {/* LEGENDA AO PASSAR O MOUSE (TOOLTIP) - ATIVA APENAS QUANDO FECHADA */}
               {!isOpen && (
                 <div className="absolute left-full ml-4 px-3 py-2 bg-slate-800 text-white text-xs rounded-md 
                                 opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0
                                 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-700">
                   {item.label}
+                  {/* Pequena seta indicadora do balão de texto */}
                   <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45 border-l border-b border-slate-700"></div>
                 </div>
               )}
@@ -96,7 +101,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       <div className="border-t border-slate-800 pt-4">
         <button
           onClick={toggleSidebar}
-          className="flex items-center h-12 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 w-full overflow-hidden"
+          className="flex items-center h-12 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 w-full group relative cursor-pointer"
         >
           <div className="min-w-[40px] flex-shrink-0 flex items-center justify-center">
             {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
@@ -110,6 +115,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           >
             <span className="text-sm">Recolher menu</span>
           </div>
+
+          {/* LEGENDA DO BOTÃO RECOLHER (SÓ SE ESTIVER RECOLHIDO) */}
+          {!isOpen && (
+            <div className="absolute left-full ml-4 px-3 py-2 bg-slate-800 text-white text-xs rounded-md 
+                            opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0
+                            transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-700">
+              Expandir menu
+              <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45 border-l border-b border-slate-700"></div>
+            </div>
+          )}
         </button>
       </div>
     </aside>
