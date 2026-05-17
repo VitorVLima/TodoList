@@ -4,7 +4,6 @@ import { CheckCircle2 } from "lucide-react";
 function SuccessModal({ isOpen, onClose, mensagem }) {
   if (!isOpen) return null;
 
-  // Função para fechar se o clique acontecer estritamente no fundo escuro
   const handleFundoClique = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -13,27 +12,31 @@ function SuccessModal({ isOpen, onClose, mensagem }) {
 
   return (
     <div 
-      onClick={handleFundoClique} // Monitora o clique no fundo
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+      onClick={handleFundoClique}
+      /* CORRIGIDO: Centralização estável com flex e pb-20 no mobile para flutuar acima da barra fixa inferior */
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
     >
-      {/* O 'cursor-default' aqui garante que o mouse volte ao normal dentro da caixinha */}
-      <div className="bg-slate-800 border border-slate-700 p-6 rounded-3xl shadow-2xl max-w-sm w-full mx-4 text-center space-y-4 animate-in zoom-in-95 duration-200 cursor-default">
-        
-        {/* Ícone Animado */}
-        <div className="flex justify-center text-emerald-500 animate-bounce">
-          <CheckCircle2 size={56} strokeWidth={2.5} />
-        </div>
+      <div 
+        /* CORRIGIDO: rounded-3xl completo e max-h-[80vh] garantindo que mensagens longas rolem internamente sem quebrar */
+        className="bg-slate-800 border border-slate-700 p-5 sm:p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center space-y-4 max-h-[80vh] flex flex-col animate-in zoom-in-95 duration-200 cursor-default"
+      >
+        <div className="overflow-y-auto no-scrollbar space-y-4 py-1 flex-1">
+          {/* Ícone Animado */}
+          <div className="flex justify-center text-emerald-500 animate-bounce shrink-0">
+            <CheckCircle2 size={48} sm:size={56} strokeWidth={2.5} />
+          </div>
 
-        {/* Mensagem Dinâmica */}
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold text-white">Sucesso!</h3>
-          <p className="text-sm text-slate-400">{mensagem}</p>
+          {/* Mensagem Dinâmica */}
+          <div className="space-y-1.5 break-words">
+            <h3 className="text-base sm:text-lg font-bold text-white">Sucesso!</h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed px-1">{mensagem}</p>
+          </div>
         </div>
 
         {/* Botão de Fechar */}
         <button
           onClick={onClose}
-          className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-all active:scale-98 shadow-lg shadow-emerald-900/20 cursor-pointer"
+          className="w-full h-10 sm:h-11 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-900/20 cursor-pointer shrink-0"
         >
           Entendido
         </button>

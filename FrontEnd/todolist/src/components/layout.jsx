@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom"; 
 import Sidebar from "./sidebar";
 import Navbar from "./navbar";
@@ -9,7 +9,9 @@ const Layout = () => {
   const { tasks, fetchTasks, searchTasks, totalPages, metrics, fetchMetrics } = useTasks();
   const location = useLocation(); 
   
-  // 1. Estados de Interface e Filtros Globais
+  // Referência para o container com scroll vertical
+  const scrollContainerRef = useRef(null);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("sidebarStatus");
     return saved !== null ? JSON.parse(saved) : false;
@@ -20,20 +22,32 @@ const Layout = () => {
   const [paginaAtual, setPaginaAtual] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // CORRIGIDO: Busca de dados inicial inteligente que respeita a URL atual no F5
+  // AJUSTADO: Monitor de scroll com delay de 100ms para esperar o React renderizar os dados novos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          top: 0,
+          behavior: "auto" 
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer); // Evita concorrência se o usuário clicar muito rápido
+  }, [paginaAtual]);
+
+  // Busca de dados inicial inteligente
   useEffect(() => {
     const loadAppData = async () => {
       try {
         const isDiariaPage = window.location.pathname.includes("tarefas-do-dia");
 
         if (isDiariaPage) {
-          // Se der F5 na página de hoje, inicializa focado no dia atual
           await Promise.all([
             searchTasks("", "Todas as Tarefas", 0, true),
             fetchMetrics("", "Todas as Tarefas", true, "")
           ]);
         } else {
-          // Se for na Home ou outra rota, carrega o painel geral
           await Promise.all([
             fetchTasks(), 
             fetchMetrics()
@@ -47,21 +61,18 @@ const Layout = () => {
     };
     loadAppData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Executa apenas uma vez ao montar/recarregar a página
+  }, []); 
 
   // Resetar página quando mudar busca, aba de filtro ou a rota da página
   useEffect(() => {
     setPaginaAtual(0);
   }, [termoBusca, filtroAtivo, location.pathname]);
 
-  // 4. MONITOR UNIFICADO: Decide o que pedir ao Spring Boot baseado na URL
+  // MONITOR UNIFICADO: Sincroniza dados com o Spring Boot baseado na URL
   useEffect(() => {
     if (isLoading) return;
-
-    // TRAVA DO CALENDÁRIO: Se estiver na rota do calendário, interrompe aqui.
     if (location.pathname.includes("calendario")) return;
 
-    // Identifica se o usuário está na rota "tarefas-do-dia"
     const isDiariaPage = location.pathname.includes("tarefas-do-dia");
 
     if (isDiariaPage) {
@@ -71,7 +82,6 @@ const Layout = () => {
       searchTasks(termoBusca, filtroAtivo, paginaAtual, false);
       fetchMetrics(termoBusca, filtroAtivo, false, ""); 
     }
-
   }, [termoBusca, filtroAtivo, paginaAtual, location.pathname, isLoading]); 
 
   const toggleSidebar = () => {
@@ -84,7 +94,12 @@ const Layout = () => {
     <div className="flex h-screen bg-slate-900 overflow-hidden">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={toggleSidebar} />
 
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isSidebarOpen ? "ml-64" : "ml-20"} h-screen overflow-y-auto bg-slate-900 text-slate-200`}>
+      {/* CONTÊINER DE SCROLL PRINCIPAL */}
+      <div 
+        ref={scrollContainerRef}
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 h-screen overflow-y-auto bg-slate-900 text-slate-200 pb-24 md:pb-0
+          ${isSidebarOpen ? "ml-0 md:ml-64" : "ml-0 md:ml-20"}`}
+      >
         
         <Navbar 
           onOpenAddModal={() => setIsAddModalOpen(true)} 
@@ -94,7 +109,8 @@ const Layout = () => {
           setFiltroAtivo={setFiltroAtivo} 
         />
 
-        <main className="px-2 md:px-4 py-6 w-full max-w-[98%] mx-auto">
+        {/* ÁREA DE CONTEÚDO DINÂMICO */}
+        <main className="px-4 md:px-6 py-4 md:py-6 w-full max-w-full md:max-w-[98%] mx-auto">
           {isLoading ? (
             <div className="flex items-center justify-center h-[60vh]">
                <LoadingScreen />
