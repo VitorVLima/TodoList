@@ -8,7 +8,7 @@ public record TaskResponseDTO(
         String titulo,
         String descricao,
         String prioridade,
-        Boolean concluida,
+        boolean concluida,
         LocalDate dataLimite,
         LocalDate dataCriacao,
         String statusCustomizado
@@ -19,7 +19,7 @@ public record TaskResponseDTO(
                 task.getTitulo(),
                 task.getDescricao(),
                 task.getPrioridade(),
-                task.getConcluida(),
+                task.isConcluida(),
                 task.getDataLimite(),
                 task.getDataCriacao(),
                 task.getStatusCustomizado()

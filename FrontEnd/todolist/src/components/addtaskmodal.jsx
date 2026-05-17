@@ -31,9 +31,8 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setTentouSubmeter(true); // Força a validação visual de todos os campos
+    setTentouSubmeter(true);
 
-    // Bloqueia o envio se houver campos inválidos (sem disparar alert)
     if (tituloInvalido || dataInvalida || descricaoInvalida) return;
 
     onAdd({
@@ -55,7 +54,6 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
     onClose();
   };
 
-  // Reseta os estados de erro caso o usuário decida fechar o modal sem salvar
   const handleClose = () => {
     setTituloTocado(false);
     setDescricaoTocada(false);
@@ -64,7 +62,16 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
     onClose();
   };
 
-  const hoje = new Date().toISOString().split("T")[0];
+  // CORRIGIDO: Extração estável da data atual respeitando o Timezone local (Fortaleza)
+  const obterDataLocalString = () => {
+    const d = new Date();
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const hojeLocal = obterDataLocalString();
 
   return (
     <div
@@ -123,7 +130,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
             </label>
             <textarea
               placeholder="Detalhes sobre o que precisa ser feito..."
-              onBlur={() => setDescricaoTocada(true)}
+              onBlur={() => setDescregexTocada && setDescricaoTocada(true)}
               rows="3"
               className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-slate-600 resize-none shadow-inner ${
                 mostrarErroDescricao
@@ -171,7 +178,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
             <div className="relative group">
               <input
                 type="date"
-                min={hoje}
+                min={hojeLocal} // <-- ATUALIZADO: Bloqueia apenas dias retroativos ao de hoje real
                 onBlur={() => setDataTocada(true)}
                 value={taskData.dataLimite}
                 onChange={(e) =>

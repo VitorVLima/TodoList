@@ -37,7 +37,16 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
 
   if (!isOpen || !task) return null;
 
-  const hoje = new Date().toISOString().split("T")[0];
+  // CORRIGIDO: Extração estável da data atual respeitando o fuso horário local brasileiro
+  const obterDataLocalString = () => {
+    const d = new Date();
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const hojeLocal = obterDataLocalString();
 
   // Validações em tempo real (Apenas via JavaScript)
   const tituloInvalido = taskData.titulo.trim() === "";
@@ -48,7 +57,7 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
     taskData.dataLimite === "" || 
     taskData.dataLimite.length < 10 || 
     isNaN(Date.parse(taskData.dataLimite)) ||
-    taskData.dataLimite < hoje; 
+    taskData.dataLimite < hojeLocal; // <-- Atualizado para a variável local estável
 
   // Condicionais para renderizar o estado visual de erro
   const mostrarErroTitulo = tituloInvalido && (tituloTocado || tentouSubmeter);
@@ -57,9 +66,8 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setTentouSubmeter(true); // Força a validação visual de todos os campos no clique
+    setTentouSubmeter(true);
 
-    // Bloqueia o envio se houver campos inválidos no JS
     if (tituloInvalido || dataInvalida || descricaoInvalida) return;
 
     // Mantém o ID e outros campos originais e mescla com os novos dados
@@ -73,7 +81,6 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
     onClose();
   };
 
-  // Reseta os estados de erro caso o usuário decida fechar o modal sem salvar
   const handleClose = () => {
     setTituloTocado(false);
     setDescricaoTocada(false);
@@ -86,12 +93,12 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-backdrop"
-      onClick={handleClose} /* Adicionado de volta para fechar ao clicar na área escura */
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-backdrop cursor-pointer"
+      onClick={handleClose}
     >
       <div
-        className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-modal"
-        onClick={(e) => e.stopPropagation()} /* Evita que o clique dentro do modal feche ele */
+        className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-modal cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
@@ -102,6 +109,7 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
             <h2 className="text-xl font-bold text-white">Editar Tarefa</h2>
           </div>
           <button
+            type="button"
             onClick={handleClose}
             className="text-slate-500 hover:text-white transition-colors cursor-pointer p-1"
           >
@@ -193,6 +201,7 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
             </label>
             <input
               type="date"
+              min={hojeLocal} // <-- ATUALIZADO: Bloqueia apenas dias anteriores ao de hoje real
               onBlur={() => setDataTocada(true)}
               className={`w-full bg-slate-800/50 border rounded-xl px-4 py-3 text-slate-200 
                 outline-none transition-all appearance-none cursor-pointer [color-scheme:dark] shadow-inner ${
@@ -207,7 +216,7 @@ const UpdateTaskModal = ({ isOpen, onClose, onUpdate, task }) => {
             />
             {mostrarErroData && (
               <p className="text-red-500 text-xs font-medium mt-1">
-                {taskData.dataLimite < hoje && taskData.dataLimite !== "" 
+                {taskData.dataLimite < hojeLocal && taskData.dataLimite !== "" 
                   ? "A data limite não pode ser anterior ao dia de hoje." 
                   : "Insira uma data válida e não deixe o campo vazio."}
               </p>

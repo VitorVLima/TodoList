@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useOutletContext } from "react-router-dom"; // Para sincronizar com o botão da Navbar
 import { User, Bell, Shield, Palette, Construction, Trash2, AlertTriangle } from "lucide-react";
 import AddTaskModal from "../components/addtaskmodal"; // Componente de criação
-import SuccessModal from "../components/SuccessModal"; // Importado o Modal de Sucesso
+import SuccessModal from "../components/successmodal"; // Importado o Modal de Sucesso
 import { useTasks } from "../hooks/useTasks"; // Hook para salvar no banco
 
 const ConfigPage = () => {

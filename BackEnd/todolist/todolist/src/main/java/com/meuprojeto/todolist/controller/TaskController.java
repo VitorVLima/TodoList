@@ -1,11 +1,15 @@
 package com.meuprojeto.todolist.controller;
 
 import com.meuprojeto.todolist.entitys.task.Task;
+import com.meuprojeto.todolist.entitys.task.TaskMetricsDTO;
 import com.meuprojeto.todolist.entitys.task.TaskRequestDTO;
 import com.meuprojeto.todolist.entitys.task.TaskResponseDTO;
 import com.meuprojeto.todolist.service.TaskService;
 import jakarta.validation.Valid;
 import org.hibernate.sql.model.ast.builder.TableUpdateBuilderSkipped;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,29 +34,29 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskResponseDTO>> taskList(){
-        List<Task> tasks = taskService.taskList();
-        List<TaskResponseDTO> response = tasks.stream().map(TaskResponseDTO::new).toList();
+    public ResponseEntity<Page<TaskResponseDTO>> taskList(@PageableDefault(size = 10, page = 0)Pageable pageable){
+        Page<Task> tasks = taskService.taskList(pageable);
+        Page<TaskResponseDTO> response = tasks.map(TaskResponseDTO::new);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/today")
-    public ResponseEntity<List<TaskResponseDTO>> taskListToday(){
-        List<Task> tasks = taskService.taskListToday();
-        List<TaskResponseDTO> response = tasks.stream().map(TaskResponseDTO::new).toList();
+    public ResponseEntity<Page<TaskResponseDTO>> taskListToday(@PageableDefault(size = 10, page = 0)Pageable pageable){
+        Page<Task> tasks = taskService.taskListToday(pageable);
+        Page<TaskResponseDTO> response = tasks.map(TaskResponseDTO::new);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<TaskResponseDTO>> searchByName(
+    public ResponseEntity<Page<TaskResponseDTO>> searchByName(
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
             @RequestParam(required = false) String name,
-            @RequestParam(value = "statusFiltro", defaultValue = "Todas as Tarefas") String statusFiltro){
+            @RequestParam(value = "statusFiltro", defaultValue = "Todas as Tarefas") String statusFiltro,
+            @RequestParam(value = "hoje", defaultValue = "false") boolean hoje,
+            @RequestParam(required = false) String dataFiltro) {
 
-        // Log para acompanhar no console do Eclipse/IntelliJ/VSCode
-        System.out.println("Filtro recebido no Java: " + statusFiltro);
-
-        List<Task> tasks = taskService.searchByName(name, statusFiltro);
-        List<TaskResponseDTO> response = tasks.stream().map(TaskResponseDTO::new).toList();
+        Page<Task> tasks = taskService.searchByName(pageable, name, statusFiltro, hoje, dataFiltro); // O controller continua igual, o service mudou internamente
+        Page<TaskResponseDTO> response = tasks.map(TaskResponseDTO::new);
         return ResponseEntity.ok(response);
     }
 
@@ -73,5 +77,16 @@ public class TaskController {
     public ResponseEntity deleteTaskConcluidas(){
         taskService.deleteAllTasksConcluidas();
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/metrics")
+    public ResponseEntity<TaskMetricsDTO> getMetrics(
+            @RequestParam(required = false) String name,
+            @RequestParam(value = "statusFiltro", defaultValue = "Todas as Tarefas") String statusFiltro,
+            @RequestParam(value = "hoje", defaultValue = "false") boolean hoje,
+            @RequestParam(required = false) String dataFiltro) {
+
+        TaskMetricsDTO metrics = taskService.getMetricsDynamic(name, statusFiltro, hoje, dataFiltro);
+        return ResponseEntity.ok(metrics);
     }
 }

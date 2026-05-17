@@ -26,7 +26,7 @@ public class Task {
     private String prioridade;
 
     @Builder.Default
-    private Boolean concluida = false;
+    private boolean concluida = false;
 
     private LocalDate dataLimite;
 
