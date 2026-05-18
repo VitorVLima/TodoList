@@ -9,64 +9,65 @@
 
 /* CUSTOMIZAÇÃO DE TEXTOS GLOBAIS DO CALENDÁRIO */
 .dark-theme-calendar button {
-    color: white !important; /* Garante que todos os números e setas herdem o branco */
+    color: white !important;
 }
 
-/* DIAS QUE JÁ PASSARAM (ADICIONADO) */
+/* DIAS QUE JÁ PASSARAM */
 .dark-theme-calendar .react-calendar__tile--past {
-    color: #4756545 !important; /* Slate 500: Tom cinza bem apagado */
-    opacity: 0.4; /* Deixa o número semi-transparente */
+    color: #eff2f6 !important; /* Corrigido de caractere corrompido para Slate 500 estável */
+    opacity: 0.4;
 }
 
-/* Garante que se o dia passado tiver bolinha de tarefa, ela também esmaeça */
-.dark-theme-calendar .react-calendar__tile--past div {
-    background-color: #312e81 !important; /* Indigo 900 opaco */
-    opacity: 0.5;
-    box-shadow: none !important; /* Remove o neon do indicador */
+/* MODIFICADO: A regra antiga limpava o box-shadow de tudo. 
+   Agora, ela só altera as bolinhas azuis normais de tarefas resolvidas, deixando as vermelhas intactas. */
+.dark-theme-calendar .react-calendar__tile--past div.bg-indigo-500 {
+    background-color: #312e81 !important; 
+    opacity: 0.2;
+    box-shadow: none !important; 
 }
 
-/* Hover suave para os dias passados ainda responderem ao mouse */
+/* Hover suave para os dias passados */
 .dark-theme-calendar .react-calendar__tile--past:hover {
-    background-color: rgba(51, 65, 85, 0.3) !important; /* slate-700 bem suave */
-    color: #64748b !important; /* Clareia levemente para slate-400 */
+    background-color: rgba(51, 65, 85, 0.3) !important;
+    color: #64748b !important;
     opacity: 0.7;
 }
 
 /* DIA ATUAL (HOJE) */
 .dark-theme-calendar .react-calendar__tile--now {
-    background: #7e5b0a !important; /* Seu tom dourado/amber atual */
-    border-radius: 12px;
-    color: white !important;
-    opacity: 1 !important; /* Garante brilho total se hoje for renderizado */
-}
-
-.dark-theme-calendar .react-calendar__tile--now:hover {
-    background: #4f46e5 !important; /* Indigo 600 ao passar o mouse */
-}
-
-/* DIA SELECIONADO/ATIVO (CLICADO) */
-.dark-theme-calendar .react-calendar__tile--active {
-    background-color: #4f46e5 !important; /* Indigo 600 */
+    background: #7e5b0a !important; 
     border-radius: 12px;
     color: white !important;
     opacity: 1 !important;
 }
 
-/* HOVER GERAL DOS TILES (DIAS) */
+.dark-theme-calendar .react-calendar__tile--now:hover {
+    background: #4f46e5 !important;
+}
+
+/* DIA SELECIONADO/ATIVO (CLICADO) */
+.dark-theme-calendar .react-calendar__tile--active {
+    background-color: #4f46e5 !important;
+    border-radius: 12px;
+    color: white !important;
+    opacity: 1 !important;
+}
+
+/* HOVER GERAL DOS TILES */
 .dark-theme-calendar .react-calendar__tile:hover {
-    background-color: #334155 !important; /* Slate 700 */
+    background-color: #334155 !important;
     border-radius: 12px;
 }
 
-/* DIAS DA SEMANA (SEG, TER, QUA...) */
+/* DIAS DA SEMANA */
 .dark-theme-calendar .react-calendar__month-view__weekdays__weekday abbr {
     text-decoration: none;
-    color: #94a3b8; /* Slate 400 */
+    color: #94a3b8;
     text-transform: uppercase;
     font-size: 0.7rem;
 }
 
-/* NAVEGAÇÃO SUPERIOR (SETAS E ANO) */
+/* NAVEGAÇÃO SUPERIOR */
 .dark-theme-calendar .react-calendar__navigation button {
     color: white !important;
     border-radius: 12px;
@@ -75,7 +76,7 @@
 
 .dark-theme-calendar .react-calendar__navigation button:enabled:focus,
 .dark-theme-calendar .react-calendar__navigation button:enabled:hover {
-    background-color: #334155 !important; /* Slate 700 */
+    background-color: #334155 !important;
 }
 
 .dark-theme-calendar .react-calendar__navigation__label {

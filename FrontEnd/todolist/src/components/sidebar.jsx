@@ -24,18 +24,20 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { id: 2, icon: <Calendar size={24} />, label: "Calendário", path: "/calendario" },
   ];
 
-  // FUNÇÃO AUXILIAR: Gerencia a rolagem estável sincronizada com a mudança de rota
+  // FUNÇÃO AUXILIAR ATUALIZADA: Força o reset da paginação no Layout e move o scroll
   const executarNavegacaoComScroll = (path) => {
+    // 1. Dispara o evento global para forçar o Layout a voltar para a página 1 (index 0)
+    window.dispatchEvent(new CustomEvent("reset-pags"));
+
     navigate(path);
     
-    // Aguarda 100ms para o ciclo de renderização do React/Spring Boot se estabilizar antes de mover o scroll
+    // Aguarda os 100ms padrão para a renderização do Spring Boot se estabilizar
     setTimeout(() => {
-      // Procura pelo container de scroll principal do Layout
       const containerScroll = document.querySelector(".overflow-y-auto");
       if (containerScroll) {
         containerScroll.scrollTo({
           top: 0,
-          behavior: "auto" // Reset imediato e limpo na troca de contextos grandes
+          behavior: "auto"
         });
       }
     }, 100);
@@ -84,7 +86,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             {[...menuItems, { id: 3, icon: <Settings size={24} />, label: "Configurações", path: "/config" }].map((item) => (
               <button
                 key={item.id}
-                /* AJUSTADO: Usa a nova função com controle de scroll */
                 onClick={() => executarNavegacaoComScroll(item.path)}
                 className={`flex items-center p-3 h-12 w-full rounded-xl transition-all group relative ${
                   location.pathname === item.path
@@ -149,9 +150,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       {/* ------------------------------------------------------------- */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 h-16 flex items-center justify-around px-2 z-[90] pb-safe">
         
-        {/* Item 1: Todas as Tarefas -> "Tarefas" */}
         <button
-          /* AJUSTADO: Navegação com scroll integrado */
           onClick={() => executarNavegacaoComScroll("/")}
           className={`flex flex-col items-center justify-center w-20 h-full transition-colors ${
             location.pathname === "/" ? "text-blue-400" : "text-slate-500"
@@ -161,7 +160,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <span className="text-[10px] font-semibold tracking-wide mt-0.5">Tarefas</span>
         </button>
 
-        {/* Item 2: Erro corrigido e scroll adicionado */}
         <button
           onClick={() => executarNavegacaoComScroll("/tarefas-do-dia")}
           className={`flex flex-col items-center justify-center w-20 h-full transition-colors ${
@@ -172,7 +170,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <span className="text-[10px] font-semibold tracking-wide mt-0.5">Hoje</span>
         </button>
 
-        {/* Item 3: Calendário */}
         <button
           onClick={() => executarNavegacaoComScroll("/calendario")}
           className={`flex flex-col items-center justify-center w-20 h-full transition-colors ${
@@ -183,7 +180,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <span className="text-[10px] font-semibold tracking-wide mt-0.5">Calendario</span>
         </button>
 
-        {/* Item 4: Menu de Expansão -> "Mais" */}
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className={`flex flex-col items-center justify-center w-20 h-full transition-colors ${
@@ -204,7 +200,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         }`}
       >
         <div className="space-y-8">
-          {/* Cabeçalho do Menu de Expansão */}
           <div className="flex justify-between items-center border-b border-slate-800 pb-4">
             <div>
               <p className="text-[10px] uppercase font-bold text-blue-400 tracking-widest">Navegação Expandida</p>
@@ -218,7 +213,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             </button>
           </div>
 
-          {/* Links em lista grande */}
           <nav className="flex flex-col gap-3">
             {[
               ...menuItems,
@@ -242,7 +236,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           </nav>
         </div>
 
-        {/* Rodapé institutional do menu mobile */}
         <div className="text-center border-t border-slate-900 pt-4 text-xs text-slate-600 font-medium font-mono">
           Task Manager v1.0.0
         </div>

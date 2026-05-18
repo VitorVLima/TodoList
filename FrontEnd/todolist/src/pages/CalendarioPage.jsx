@@ -26,8 +26,6 @@ function CalendarioPage() {
   // CONSUMO DO CONTEXTO CENTRALIZADO
   const {
     tasks: tasksPaginadas,
-    fetchTasks,
-    searchTasks,
     isAddModalOpen,
     setIsAddModalOpen,
     filtroAtivo,
@@ -36,11 +34,12 @@ function CalendarioPage() {
     totalPages,
     metrics,
     fetchMetrics,
+    searchTasks,
   } = useOutletContext();
 
   const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
 
-  // Estado local exclusivo para armazenar os dias que possuem tarefas cadastradas (Marcadores azuis)
+  // Armazena os dias que possuem tarefas cadastradas [{ data: "YYYY-MM-DD", temAtrasada: true }]
   const [datasComTarefas, setDatasComTarefas] = useState([]);
 
   // ESTADOS DE INTERFACE
@@ -67,6 +66,7 @@ function CalendarioPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
+  // Mapeia as tarefas identificando quais dias possuem pendências atrasadas
   const carregarPontosCalendario = async () => {
     try {
       const response = await api.get("/tasks/search", {
@@ -78,10 +78,29 @@ function CalendarioPage() {
         },
       });
       const conteudo = response.data.content || [];
-      const mapeamentoDatas = conteudo.map((t) =>
-        extrairAnoMesDia(t.dataLimite),
-      );
-      setDatasComTarefas(mapeamentoDatas);
+      
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      const mapaDatas = conteudo.reduce((acc, task) => {
+        const dataFormatada = extrairAnoMesDia(task.dataLimite);
+        if (!dataFormatada) return acc;
+
+        const [ano, mes, dia] = task.dataLimite.split("-");
+        const dataLimiteTask = new Date(ano, mes - 1, dia);
+        
+        const estaAtrasada = !task.concluida && dataLimiteTask < hoje;
+
+        if (!acc[dataFormatada]) {
+          acc[dataFormatada] = { data: dataFormatada, temAtrasada: estaAtrasada };
+        } else if (estaAtrasada) {
+          acc[dataFormatada].temAtrasada = true;
+        }
+
+        return acc;
+      }, {});
+
+      setDatasComTarefas(Object.values(mapaDatas));
     } catch (error) {
       console.error("Erro ao carregar marcadores do calendário:", error);
     }
@@ -91,16 +110,23 @@ function CalendarioPage() {
     carregarPontosCalendario();
   }, []);
 
-  // MONITOR DINÂMICO EXCLUSIVO DO CALENDÁRIO
+  // MODIFICADO: MONITOR DINÂMICO UNIFICADO E INTELIGENTE
+  // Resolve de uma vez por todas conflitos de Race Condition ao carregar a tela do calendário
   useEffect(() => {
     const dataFormatada = extrairAnoMesDia(dataSelecionada);
+
+    // 🛡️ TRAVA DE SEGURANÇA: Se o usuário mudou de tela (ou trocou a data/filtro) mas o estado 
+    // global ainda preserva a paginaAtual da tela anterior, barramos o ciclo, limpamos para 0 e saímos.
+    if (paginaAtual !== 0 && tasksPaginadas.length === 0) {
+      setPaginaAtual(0);
+      return; 
+    }
+
+    // Executa as chamadas com total segurança de alinhamento
     searchTasks("", filtroAtivo, paginaAtual, false, dataFormatada);
     fetchMetrics("", filtroAtivo, false, dataFormatada);
-  }, [dataSelecionada, filtroAtivo, paginaAtual]);
 
-  useEffect(() => {
-    setPaginaAtual(0);
-  }, [dataSelecionada, filtroAtivo]);
+  }, [dataSelecionada, filtroAtivo, paginaAtual]); 
 
   // OPERAÇÕES CRUD REATIVAS
   const onAdd = async (newTask) => {
@@ -111,9 +137,7 @@ function CalendarioPage() {
       searchTasks("", filtroAtivo, paginaAtual, false, dataFormatada);
       fetchMetrics("", filtroAtivo, false, dataFormatada);
       carregarPontosCalendario();
-      dispararSucesso(
-        "Sua tarefa foi agendada e salva com sucesso no calendário!",
-      );
+      dispararSucesso("Sua tarefa foi agendada e salva com sucesso no calendário!");
     } else {
       tratarErrosBackend(res.error);
     }
@@ -139,10 +163,7 @@ function CalendarioPage() {
       setTarefaParaDeletar(null);
       const dataFormatada = extrairAnoMesDia(dataSelecionada);
 
-      const paginaDestino =
-        tasksPaginadas.length === 1 && paginaAtual > 0
-          ? paginaAtual - 1
-          : paginaAtual;
+      const paginaDestino = tasksPaginadas.length === 1 && paginaAtual > 0 ? paginaAtual - 1 : paginaAtual;
       if (paginaDestino !== paginaAtual) {
         setPaginaAtual(paginaDestino);
       } else {
@@ -151,9 +172,7 @@ function CalendarioPage() {
 
       fetchMetrics("", filtroAtivo, false, dataFormatada);
       carregarPontosCalendario();
-      dispararSucesso(
-        "A tarefa foi removida definitivamente do seu cronograma.",
-      );
+      dispararSucesso("A tarefa foi removida definitivamente do seu cronograma.");
     } else {
       alert("Não foi possível excluir a tarefa.");
     }
@@ -167,6 +186,7 @@ function CalendarioPage() {
       const dataFormatada = extrairAnoMesDia(dataSelecionada);
       searchTasks("", filtroAtivo, paginaAtual, false, dataFormatada);
       fetchMetrics("", filtroAtivo, false, dataFormatada);
+      carregarPontosCalendario(); 
       dispararSucesso("Ótimo! Tarefa concluída e atualizada no painel visual.");
     } else {
       tratarErrosBackend(res.error);
@@ -202,7 +222,6 @@ function CalendarioPage() {
 
         {/* HEADER */}
         <header className="px-0.5">
-          {/* ATUALIZADO: Legenda diminuída especificamente no mobile (text-[15px] sm:text-xl) */}
           <h1 className="text-[15px] sm:text-xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
             <CalendarIcon size={20} className="text-indigo-500 shrink-0" />
             Calendário — {filtroAtivo || "Todas as Tarefas"}
@@ -219,21 +238,24 @@ function CalendarioPage() {
                 value={dataSelecionada}
                 className="dark-theme-calendar w-full"
                 tileClassName={({ date, view }) => {
-                  if (
-                    view === "month" &&
-                    date < new Date().setHours(0, 0, 0, 0)
-                  ) {
+                  if (view === "month" && date < new Date().setHours(0, 0, 0, 0)) {
                     return "react-calendar__tile--past";
                   }
                 }}
                 tileContent={({ date, view }) => {
-                  if (
-                    view === "month" &&
-                    datasComTarefas.includes(extrairAnoMesDia(date))
-                  ) {
-                    return (
-                      <div className="h-1.5 w-1.5 bg-indigo-500 rounded-full mx-auto mt-1 shadow-[0_0_5px_rgba(99,102,241,0.8)]"></div>
-                    );
+                  if (view === "month") {
+                    const dataStr = extrairAnoMesDia(date);
+                    const correspondencia = datasComTarefas.find((t) => t.data === dataStr);
+
+                    if (correspondencia) {
+                      return correspondencia.temAtrasada ? (
+                        /* Bolinha Vermelha ULTRA NÍTIDA */
+                        <div className="h-2 w-2 bg-red-500 rounded-full mx-auto mt-1 shadow-[0_0_10px_#ef4444,0_0_4px_#ef4444] animate-pulse"></div>
+                      ) : (
+                        /* Bolinha Azul Tradicional */
+                        <div className="h-1.5 w-1.5 bg-indigo-500 rounded-full mx-auto mt-1 shadow-[0_0_5px_rgba(99,102,241,0.8)]"></div>
+                      );
+                    }
                   }
                 }}
               />
@@ -261,72 +283,46 @@ function CalendarioPage() {
           <div className="flex flex-col gap-2.5 md:gap-3 w-full pb-4 md:pb-6 min-w-0 overflow-hidden">
             <div className="flex justify-between items-center px-1">
               <h2 className="text-[11px] md:text-sm font-bold text-slate-400 uppercase tracking-widest p-2">
-                {filtroAtivo === "Todas as Tarefas"
-                  ? "BLOCO DE TAREFAS"
-                  : `Filtrado por: ${filtroAtivo}`}
+                {filtroAtivo === "Todas as Tarefas" ? "BLOCO DE TAREFAS" : `Filtrado por: ${filtroAtivo}`}
               </h2>
               <span className="bg-slate-800 text-slate-500 text-[9px] md:text-[10px] px-2 py-1 rounded-md font-mono uppercase">
                 {metrics?.total ?? 0} Itens
               </span>
             </div>
 
-            {/* CONTEÚDO DINÂMICO */}
             {tasksPaginadas.length > 0 ? (
               <>
-                {/* 🖥️ VERSÃO PC: Renderiza a tabela clássica estruturada */}
                 <div className="hidden lg:block bg-slate-800/30 rounded-2xl border border-slate-800 overflow-x-auto shadow-2xl w-full">
                   <Tabela
                     tasks={tasksPaginadas}
-                    onToggle={(id) =>
-                      setTarefaParaConcluir(
-                        tasksPaginadas.find((t) => t.id === id),
-                      )
-                    }
-                    onDelete={(id) =>
-                      setTarefaParaDeletar(
-                        tasksPaginadas.find((t) => t.id === id),
-                      )
-                    }
-                    onEdit={(task) =>
-                      !task.concluida && setTarefaParaEditar(task)
-                    }
+                    onToggle={(id) => setTarefaParaConcluir(tasksPaginadas.find((t) => t.id === id))}
+                    onDelete={(id) => setTarefaParaDeletar(tasksPaginadas.find((t) => t.id === id))}
+                    onEdit={(task) => !task.concluida && setTarefaParaEditar(task)}
                     onShowDetail={(task) => setTarefaSelecionada(task)}
                   />
                 </div>
 
-                {/* 📱 VERSÃO MOBILE: Substitui a tabela pela grade moderna de cards do TaskDay */}
                 <div className="grid grid-cols-1 gap-3 lg:hidden">
                   {tasksPaginadas.map((task) => (
                     <div
                       key={task.id}
                       className={`group relative bg-slate-800/40 border transition-all duration-300 p-4 rounded-2xl flex flex-col justify-between gap-3.5 h-fit
-                        ${
-                          task.concluida
-                            ? "border-slate-800/80 bg-slate-900/20 opacity-50"
-                            : "border-slate-800 hover:border-slate-700"
+                        ${task.concluida
+                          ? "border-slate-800/80 bg-slate-900/20 opacity-50"
+                          : "border-slate-800 hover:border-slate-700"
                         }`}
                     >
                       <div className="space-y-1.5">
                         <div className="flex justify-between items-start gap-4">
-                          <h3
-                            className={`text-sm font-bold text-white tracking-tight break-words flex-1 ${task.concluida ? "line-through text-slate-500 font-medium" : ""}`}
-                          >
+                          <h3 className={`text-sm font-bold text-white tracking-tight break-words flex-1 ${task.concluida ? "line-through text-slate-500 font-medium" : ""}`}>
                             {task.titulo}
                           </h3>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider shrink-0 ${getPrioridadeBadge(task.prioridade)}`}
-                          >
+                          <span className={`px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider shrink-0 ${getPrioridadeBadge(task.prioridade)}`}>
                             {task.prioridade}
                           </span>
                         </div>
-                        <p
-                          className={`text-xs leading-relaxed break-words line-clamp-2 ${task.concluida ? "text-slate-600" : "text-slate-400"}`}
-                        >
-                          {task.descricao || (
-                            <span className="italic opacity-40">
-                              Sem descrição para esta atividade.
-                            </span>
-                          )}
+                        <p className={`text-xs leading-relaxed break-words line-clamp-2 ${task.concluida ? "text-slate-600" : "text-slate-400"}`}>
+                          {task.descricao || <span className="italic opacity-40">Sem descrição para esta atividade.</span>}
                         </p>
                       </div>
 
@@ -393,38 +389,12 @@ function CalendarioPage() {
       </div>
 
       {/* MODAIS COMPORTAMENTAIS */}
-      <TaskDetailModal
-        task={tarefaSelecionada}
-        onClose={() => setTarefaSelecionada(null)}
-      />
-      <AddTaskModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={onAdd}
-      />
-      <UpdateTaskModal
-        isOpen={!!tarefaParaEditar}
-        task={tarefaParaEditar}
-        onClose={() => setTarefaParaEditar(null)}
-        onUpdate={onUpdate}
-      />
-      <ConfirmDeleteModal
-        isOpen={!!tarefaParaDeletar}
-        taskTitle={tarefaParaDeletar?.titulo}
-        onClose={() => setTarefaParaDeletar(null)}
-        onConfirm={onDelete}
-      />
-      <ConfirmDoneModal
-        isOpen={!!tarefaParaConcluir}
-        taskTitle={tarefaParaConcluir?.titulo}
-        onClose={() => setTarefaParaConcluir(null)}
-        onConfirm={onConfirmDone}
-      />
-      <SuccessModal
-        isOpen={isSuccessOpen}
-        onClose={() => setIsSuccessOpen(false)}
-        mensagem={successMessage}
-      />
+      <TaskDetailModal task={tarefaSelecionada} onClose={() => setTarefaSelecionada(null)} />
+      <AddTaskModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAdd={onAdd} />
+      <UpdateTaskModal isOpen={!!tarefaParaEditar} task={tarefaParaEditar} onClose={() => setTarefaParaEditar(null)} onUpdate={onUpdate} />
+      <ConfirmDeleteModal isOpen={!!tarefaParaDeletar} taskTitle={tarefaParaDeletar?.titulo} onClose={() => setTarefaParaDeletar(null)} onConfirm={onDelete} />
+      <ConfirmDoneModal isOpen={!!tarefaParaConcluir} taskTitle={tarefaParaConcluir?.titulo} onClose={() => setTarefaParaConcluir(null)} onConfirm={onConfirmDone} />
+      <SuccessModal isOpen={isSuccessOpen} onClose={() => setIsSuccessOpen(false)} message={successMessage} />
     </>
   );
 }

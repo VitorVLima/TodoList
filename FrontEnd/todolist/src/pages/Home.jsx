@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { CheckCircle2, Eye, Edit2, Trash2, Calendar } from "lucide-react"; // Importados ícones para os cards mobile
+import { CheckCircle2, Eye, Edit2, Trash2, Calendar, AlertTriangle } from "lucide-react"; // ADICIONADO: AlertTriangle
 import Tabela from "../components/tabela";
 import Paginacao from "../components/paginacao";
 import TaskDetailModal from "../components/taskdetailmodal";
@@ -15,8 +15,6 @@ import { Helmet } from "react-helmet-async";
 function Home() {
   const {
     tasks,
-    fetchTasks,
-    searchTasks,
     isAddModalOpen,
     setIsAddModalOpen,
     filtroAtivo,
@@ -25,11 +23,11 @@ function Home() {
     totalPages,
     metrics,
     fetchMetrics,
+    searchTasks,
   } = useOutletContext();
 
   const { handleAddTask, handleUpdateTask, handleDeleteTask } = useTasks();
 
-  // ESTADOS DOS MODAIS DE INTERAÇÃO
   const [tarefaSelecionada, setTarefaSelecionada] = useState(null);
   const [tarefaParaEditar, setTarefaParaEditar] = useState(null);
   const [tarefaParaDeletar, setTarefaParaDeletar] = useState(null);
@@ -43,7 +41,6 @@ function Home() {
     setIsSuccessOpen(true);
   };
 
-  // FUNÇÕES CRUD REATIVAS
   const onAdd = async (newTask) => {
     const res = await handleAddTask(newTask);
     if (res.success) {
@@ -72,8 +69,7 @@ function Home() {
     const res = await handleDeleteTask(tarefaParaDeletar.id);
     if (res.success) {
       setTarefaParaDeletar(null);
-      const paginaDestino =
-        tasks.length === 1 && paginaAtual > 0 ? paginaAtual - 1 : paginaAtual;
+      const paginaDestino = tasks.length === 1 && paginaAtual > 0 ? paginaAtual - 1 : paginaAtual;
 
       if (paginaDestino !== paginaAtual) {
         setPaginaAtual(paginaDestino);
@@ -121,11 +117,23 @@ function Home() {
     }
   };
 
-  // Formata visualmente a string da data vinda do banco (YYYY-MM-DD) para exibição correta nos cards mobile
   const formatarDataCard = (dataString) => {
     if (!dataString) return "";
     const [ano, mes, dia] = dataString.split("-");
     return `${dia}/${mes}/${ano}`;
+  };
+
+  // ADICIONADO: Função que checa se a tarefa está estritamente atrasada hoje
+  const verificarSeEstaAtrasada = (dataLimiteStr, concluida) => {
+    if (!dataLimiteStr || concluida) return false;
+    
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias
+
+    const [ano, mes, dia] = dataLimiteStr.split("-");
+    const dataLimite = new Date(ano, mes - 1, dia);
+
+    return dataLimite < hoje;
   };
 
   return (
@@ -200,109 +208,119 @@ function Home() {
         {/* SEÇÃO LISTAGEM DE TAREFAS (HÍBRIDA) */}
         <section className="pb-4 md:pb-6">
           <h2 className="text-[11px] md:text-sm font-bold text-slate-400 uppercase tracking-widest p-4">
-            {filtroAtivo === "Todas as Tarefas"
-              ? "BLOCO DE TAREFAS"
-              : `Filtrado por: ${filtroAtivo}`}
+            {filtroAtivo === "Todas as Tarefas" ? "BLOCO DE TAREFAS" : `Filtrado por: ${filtroAtivo}`}
           </h2>
 
           {tasks.length > 0 ? (
             <>
-              {/* 🖥️ VERSÃO PC: Mantém intacta a exibição clássica e robusta por Tabela */}
+              {/* 🖥️ VERSÃO PC */}
               <div className="hidden lg:block bg-slate-800/30 rounded-2xl border border-slate-800 overflow-x-auto shadow-2xl w-full">
                 <Tabela
                   tasks={tasks}
-                  onToggle={(id) =>
-                    setTarefaParaConcluir(tasks.find((t) => t.id === id))
-                  }
-                  onDelete={(id) =>
-                    setTarefaParaDeletar(tasks.find((t) => t.id === id))
-                  }
-                  onEdit={(task) =>
-                    !task.concluida && setTarefaParaEditar(task)
-                  }
+                  onToggle={(id) => setTarefaParaConcluir(tasks.find((t) => t.id === id))}
+                  onDelete={(id) => setTarefaParaDeletar(tasks.find((t) => t.id === id))}
+                  onEdit={(task) => !task.concluida && setTarefaParaEditar(task)}
                   onShowDetail={(task) => setTarefaSelecionada(task)}
                 />
               </div>
 
-              {/* 📱 VERSÃO MOBILE: Substitui a tabela pela grade anatômica de cartões fluídos */}
+              {/* 📱 VERSÃO MOBILE */}
               <div className="grid grid-cols-1 gap-3 lg:hidden">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={`group relative bg-slate-800/40 border transition-all duration-300 p-4 rounded-2xl flex flex-col justify-between gap-3.5 h-fit
-                      ${
-                        task.concluida
+                {tasks.map((task) => {
+                  // Executa a verificação para cada card
+                  const estaAtrasada = verificarSeEstaAtrasada(task.dataLimite, task.concluida);
+
+                  return (
+                    <div
+                      key={task.id}
+                      /* MODIFICADO: Se estiver atrasada, aplica a borda vermelha soft fosca para contrastar */
+                      className={`group relative bg-slate-800/40 border transition-all duration-300 p-4 rounded-2xl flex flex-col justify-between gap-3.5 h-fit
+                        ${task.concluida
                           ? "border-slate-800/80 bg-slate-900/20 opacity-50"
+                          : estaAtrasada
+                          ? "border-red-500/40 bg-red-950/5 hover:border-red-500/60 shadow-lg shadow-red-950/10"
                           : "border-slate-800 hover:border-slate-700"
-                      }`}
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-start gap-4">
-                        <h3
-                          className={`text-sm font-bold text-white tracking-tight break-words flex-1 ${task.concluida ? "line-through text-slate-500 font-medium" : ""}`}
-                        >
-                          {task.titulo}
-                        </h3>
-                        <span
-                          className={`px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider shrink-0 ${getPrioridadeBadge(task.prioridade)}`}
-                        >
-                          {task.prioridade}
-                        </span>
-                      </div>
-                      <p
-                        className={`text-xs leading-relaxed break-words line-clamp-2 ${task.concluida ? "text-slate-600" : "text-slate-400"}`}
-                      >
-                        {task.descricao || (
-                          <span className="italic opacity-40">
-                            Sem descrição para esta atividade.
+                        }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-start gap-4">
+                          <h3
+                            className={`text-sm font-bold text-white tracking-tight break-words flex-1 ${
+                              task.concluida ? "line-through text-slate-500 font-medium" : ""
+                            }`}
+                          >
+                            {task.titulo}
+                          </h3>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider shrink-0 ${getPrioridadeBadge(
+                              task.prioridade
+                            )}`}
+                          >
+                            {task.prioridade}
                           </span>
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-slate-800/60 pt-3 mt-0.5">
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-                        <Calendar size={13} />
-                        <span>Prazo: {formatarDataCard(task.dataLimite)}</span>
+                        </div>
+                        <p
+                          className={`text-xs leading-relaxed break-words line-clamp-2 ${
+                            task.concluida ? "text-slate-600" : "text-slate-400"
+                          }`}
+                        >
+                          {task.descricao || (
+                            <span className="italic opacity-40">Sem descrição para esta atividade.</span>
+                          )}
+                        </p>
                       </div>
 
-                      <div className="flex items-center gap-0.5">
-                        {!task.concluida && (
+                      {/* Rodapé do Card */}
+                      <div className={`flex items-center justify-between border-t pt-3 mt-0.5 ${
+                        estaAtrasada ? "border-red-500/20" : "border-slate-800/60"
+                      }`}>
+                        
+                        {/* MODIFICADO: Container do prazo fica inteiramente vermelho com ícone de Alerta caso a data tenha expirado */}
+                        <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${
+                          estaAtrasada ? "text-red-400 animate-pulse" : "text-slate-500 font-medium"
+                        }`}>
+                          {estaAtrasada ? <AlertTriangle size={13} /> : <Calendar size={13} />}
+                          <span>Prazo: {formatarDataCard(task.dataLimite)}</span>
+                        </div>
+
+                        <div className="flex items-center gap-0.5">
+                          {!task.concluida && (
+                            <button
+                              onClick={() => setTarefaParaConcluir(task)}
+                              className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
+                              title="Concluir tarefa"
+                            >
+                              <CheckCircle2 size={15} />
+                            </button>
+                          )}
                           <button
-                            onClick={() => setTarefaParaConcluir(task)}
-                            className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
-                            title="Concluir tarefa"
+                            onClick={() => setTarefaSelecionada(task)}
+                            className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"
+                            title="Ver detalhes"
                           >
-                            <CheckCircle2 size={15} />
+                            <Eye size={15} />
                           </button>
-                        )}
-                        <button
-                          onClick={() => setTarefaSelecionada(task)}
-                          className="p-2 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Ver detalhes"
-                        >
-                          <Eye size={15} />
-                        </button>
-                        {!task.concluida && (
+                          {!task.concluida && (
+                            <button
+                              onClick={() => setTarefaParaEditar(task)}
+                              className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
+                              title="Editar tarefa"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                          )}
                           <button
-                            onClick={() => setTarefaParaEditar(task)}
-                            className="p-2 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
-                            title="Editar tarefa"
+                            onClick={() => setTarefaParaDeletar(task)}
+                            className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                            title="Excluir tarefa"
                           >
-                            <Edit2 size={15} />
+                            <Trash2 size={15} />
                           </button>
-                        )}
-                        <button
-                          onClick={() => setTarefaParaDeletar(task)}
-                          className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                          title="Excluir tarefa"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -322,38 +340,12 @@ function Home() {
       </div>
 
       {/* MODAIS DA PÁGINA */}
-      <TaskDetailModal
-        task={tarefaSelecionada}
-        onClose={() => setTarefaSelecionada(null)}
-      />
-      <AddTaskModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={onAdd}
-      />
-      <UpdateTaskModal
-        isOpen={!!tarefaParaEditar}
-        task={tarefaParaEditar}
-        onClose={() => setTarefaParaEditar(null)}
-        onUpdate={onUpdate}
-      />
-      <ConfirmDeleteModal
-        isOpen={!!tarefaParaDeletar}
-        taskTitle={tarefaParaDeletar?.titulo}
-        onClose={() => setTarefaParaDeletar(null)}
-        onConfirm={onDelete}
-      />
-      <ConfirmDoneModal
-        isOpen={!!tarefaParaConcluir}
-        taskTitle={tarefaParaConcluir?.titulo}
-        onClose={() => setTarefaParaConcluir(null)}
-        onConfirm={onConfirmDone}
-      />
-      <SuccessModal
-        isOpen={isSuccessOpen}
-        onClose={() => setIsSuccessOpen(false)}
-        mensagem={successMessage}
-      />
+      <TaskDetailModal task={tarefaSelecionada} onClose={() => setTarefaSelecionada(null)} />
+      <AddTaskModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAdd={onAdd} />
+      <UpdateTaskModal isOpen={!!tarefaParaEditar} task={tarefaParaEditar} onClose={() => setTarefaParaEditar(null)} onUpdate={onUpdate} />
+      <ConfirmDeleteModal isOpen={!!tarefaParaDeletar} taskTitle={tarefaParaDeletar?.titulo} onClose={() => setTarefaParaDeletar(null)} onConfirm={onDelete} />
+      <ConfirmDoneModal isOpen={!!tarefaParaConcluir} taskTitle={tarefaParaConcluir?.titulo} onClose={() => setTarefaParaConcluir(null)} onConfirm={onConfirmDone} />
+      <SuccessModal isOpen={isSuccessOpen} onClose={() => setIsSuccessOpen(false)} mensagem={successMessage} />
     </>
   );
 }

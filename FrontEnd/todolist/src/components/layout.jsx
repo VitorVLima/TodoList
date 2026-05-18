@@ -22,7 +22,7 @@ const Layout = () => {
   const [paginaAtual, setPaginaAtual] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // AJUSTADO: Monitor de scroll com delay de 100ms para esperar o React renderizar os dados novos
+  // Monitor de scroll com delay de 100ms para esperar o React renderizar os dados novos
   useEffect(() => {
     const timer = setTimeout(() => {
       if (scrollContainerRef.current) {
@@ -63,25 +63,51 @@ const Layout = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  // Resetar página quando mudar busca, aba de filtro ou a rota da página
+  // Escuta o evento global customizado disparado pela Sidebar
   useEffect(() => {
+    const forcarResetPagina = () => setPaginaAtual(0);
+
+    // Adiciona o ouvinte para cliques na sidebar (mesmo na rota atual)
+    window.addEventListener("reset-pags", forcarResetPagina);
+
+    // Comportamento original: reseta ao mudar filtros ou digitação
     setPaginaAtual(0);
+
+    // Remove o listener para evitar vazamento de memória (Memory Leak)
+    return () => {
+      window.removeEventListener("reset-pags", forcarResetPagina);
+    };
   }, [termoBusca, filtroAtivo, location.pathname]);
 
-  // MONITOR UNIFICADO: Sincroniza dados com o Spring Boot baseado na URL
+  // MODIFICADO: MONITOR UNIFICADO BLINDADO
   useEffect(() => {
     if (isLoading) return;
     if (location.pathname.includes("calendario")) return;
 
     const isDiariaPage = location.pathname.includes("tarefas-do-dia");
 
-    if (isDiariaPage) {
-      searchTasks(termoBusca, filtroAtivo, paginaAtual, true); 
-      fetchMetrics(termoBusca, filtroAtivo, true, ""); 
-    } else {
-      searchTasks(termoBusca, filtroAtivo, paginaAtual, false);
-      fetchMetrics(termoBusca, filtroAtivo, false, ""); 
+    // 🛡️ TRAVA DE SEGURANÇA (Race Condition): Se a URL mudou para a página diária, mas o 
+    // estado local do React ainda não concluiu o ciclo de zerar a página, barramos a chamada.
+    if (isDiariaPage && paginaAtual > 0 && tasks.length === 0) {
+      return; 
     }
+
+    const carregarDadosSincronizados = async () => {
+      try {
+        if (isDiariaPage) {
+          searchTasks(termoBusca, filtroAtivo, paginaAtual, true); 
+          fetchMetrics(termoBusca, filtroAtivo, true, ""); 
+        } else {
+          searchTasks(termoBusca, filtroAtivo, paginaAtual, false);
+          fetchMetrics(termoBusca, filtroAtivo, false, ""); 
+        }
+      } catch (error) {
+        console.error("Erro na sincronização dos dados com o servidor:", error);
+      }
+    };
+
+    carregarDadosSincronizados();
+    
   }, [termoBusca, filtroAtivo, paginaAtual, location.pathname, isLoading]); 
 
   const toggleSidebar = () => {
